@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – MCOps{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Server Dashboard</div>
+        <div class="page-subtitle">Alle verwalteten Minecraft-Instanzen</div>
+    </div>
+    <a href="/create" class="btn btn-primary btn-lg">
+        <span>➕</span> Server erstellen
+    </a>
+</div>
+
+<!-- STAT CARDS -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Gesamt Server</div>
+        <div class="stat-value">{{ servers|length }}</div>
+        <div class="stat-sub">Instanzen</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Online</div>
+        <div class="stat-value" style="color:var(--green)">
+            {{ servers.values()|selectattr('status','equalto','online')|list|length }}
+        </div>
+        <div class="stat-sub">Aktiv</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Offline</div>
+        <div class="stat-value" style="color:var(--red)">
+            {{ servers.values()|selectattr('status','equalto','offline')|list|length }}
+        </div>
+        <div class="stat-sub">Gestoppt</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Spieler</div>
+        <div class="stat-value" id="player-count">–</div>
+        <div class="stat-sub">Online jetzt</div>
+    </div>
+</div>
+
+<!-- SERVER TABLE -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">🖥 Instanzen</span>
+        <span class="text-muted text-sm">{{ servers|length }} Server</span>
+    </div>
+
+    {% if servers %}
+    <table class="server-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Software</th>
+                <th>Version</th>
+                <th>Port</th>
+                <th>RAM</th>
+                <th>Status</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for name, info in servers.items() %}
+            <tr>
+                <td>
+                    <a href="/server/{{ name }}" style="color:var(--text);font-weight:600;text-decoration:none;">
+                        {{ name }}
+                    </a>
+                </td>
+                <td>
+                    {% set sw = info.software|lower %}
+                    <span class="sw-icon sw-{{ sw }}">
+                        {% if sw == 'paper' %}P{% elif sw == 'velocity' %}V{% else %}F{% endif %}
+                    </span>
+                    <span style="margin-left:0.4rem">{{ info.software|capitalize }}</span>
+                </td>
+                <td class="mono text-muted">{{ info.version }}</td>
+                <td class="mono">{{ info.port }}</td>
+                <td>{{ info.ram_gb }} GB</td>
+                <td id="status-{{ name }}">
+                    {% if info.status == 'online' %}
+                    <span class="badge badge-online"><span class="dot"></span>Online</span>
+                    {% else %}
+                    <span class="badge badge-offline"><span class="dot"></span>Offline</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="flex gap-1">
+                        <a href="/server/{{ name }}" class="btn btn-ghost btn-sm">Verwalten</a>
+                        {% if info.status == 'online' %}
+                        <button class="btn btn-danger btn-sm"
+                            onclick="serverAction('{{ name }}','stop',this)">Stop</button>
+                        {% else %}
+                        <button class="btn btn-success btn-sm"
+                            onclick="serverAction('{{ name }}','start',this)">Start</button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center;padding:4rem 2rem;color:var(--text-muted)">
+        <div style="font-size:3rem;margin-bottom:1rem">🗄</div>
+        <p style="font-size:1rem;font-weight:500;color:var(--text)">Keine Server gefunden</p>
+        <p style="margin-bottom:1.5rem">Erstelle deinen ersten Minecraft-Server.</p>
+        <a href="/create" class="btn btn-primary">Server erstellen</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function serverAction(name, action, btn) {
+    btn.disabled = true;
+    const orig = btn.textContent;
+    btn.textContent = '...';
+    try {
+        const fd = new FormData();
+        fd.append('action', action);
+        const res = await fetch(`/server/${name}/action`, { method: 'POST', body: fd });
+        const data = await res.json();
+        const cell = document.getElementById(`status-${name}`);
+        if (data.status === 'online') {
+            cell.innerHTML = '<span class="badge badge-online"><span class="dot"></span>Online</span>';
+            btn.textContent = 'Stop';
+            btn.className = 'btn btn-danger btn-sm';
+            btn.onclick = () => serverAction(name, 'stop', btn);
+        } else {
+            cell.innerHTML = '<span class="badge badge-offline"><span class="dot"></span>Offline</span>';
+            btn.textContent = 'Start';
+            btn.className = 'btn btn-success btn-sm';
+            btn.onclick = () => serverAction(name, 'start', btn);
+        }
+    } catch(e) { btn.textContent = orig; }
+    btn.disabled = false;
+}
+
+// Load player count
+fetch('/api/stats').then(r=>r.json()).then(d=>{
+    document.getElementById('player-count').textContent = d.current_players ?? 0;
+}).catch(()=>{});
+</script>
+{% endblock %}

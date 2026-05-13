@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Dateien – {{ name }} – MCOps{% endblock %}
+
+{% block head %}
+<style>
+.breadcrumb { display:flex; align-items:center; gap:0.4rem; font-size:0.82rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+.breadcrumb a { color:var(--blue-h); text-decoration:none; }
+.breadcrumb a:hover { text-decoration:underline; }
+.breadcrumb-sep { color:var(--text-dim); }
+.file-table { width:100%; border-collapse:collapse; }
+.file-table th { text-align:left; padding:0.6rem 1rem; font-size:0.72rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); background:var(--surface2); }
+.file-table td { padding:0.7rem 1rem; border-bottom:1px solid var(--border); vertical-align:middle; font-size:0.85rem; }
+.file-table tr:last-child td { border-bottom:none; }
+.file-table tr:hover td { background:rgba(255,255,255,0.02); cursor:pointer; }
+.file-icon { font-size:1rem; margin-right:0.4rem; }
+.editor-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:100; align-items:center; justify-content:center; }
+.editor-overlay.open { display:flex; }
+.editor-modal { background:var(--surface); border:1px solid var(--border); border-radius:12px; width:min(90vw,800px); max-height:90vh; display:flex; flex-direction:column; }
+.editor-header { padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.editor-body { flex:1; overflow:hidden; display:flex; flex-direction:column; padding:1rem; gap:0.75rem; }
+.editor-textarea { flex:1; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:0.75rem; font-family:'JetBrains Mono','Fira Code',monospace; font-size:0.8rem; line-height:1.6; resize:none; outline:none; min-height:400px; }
+.editor-footer { padding:0.75rem 1.25rem; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:0.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">📁 Datei-Manager</div>
+        <div class="page-subtitle">{{ name }}</div>
+    </div>
+    <a href="/server/{{ name }}" class="btn btn-ghost">← Konsole</a>
+</div>
+
+<!-- Breadcrumb -->
+<div class="breadcrumb">
+    <a href="/server/{{ name }}/files">🏠 Root</a>
+    {% for crumb in breadcrumbs %}
+    <span class="breadcrumb-sep">›</span>
+    <a href="/server/{{ name }}/files?path={{ crumb.path }}">{{ crumb.name }}</a>
+    {% endfor %}
+</div>
+
+<!-- Upload bar -->
+<div class="card" style="margin-bottom:1rem">
+    <div class="card-body" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;padding:0.75rem 1rem;">
+        <span class="text-muted text-sm">Datei hochladen:</span>
+        <input type="file" id="upload-input" style="display:none" onchange="uploadFile(this)">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('upload-input').click()">
+            📤 Datei wählen
+        </button>
+        <span id="upload-status" class="text-muted text-sm"></span>
+    </div>
+</div>
+
+<!-- File list -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">{{ current_path or '/' }}</span>
+        <span class="text-muted text-sm">{{ items|length }} Einträge</span>
+    </div>
+    <table class="file-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Größe</th>
+                <th>Geändert</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if breadcrumbs %}
+            <tr onclick="location.href='/server/{{ name }}/files?path={{ breadcrumbs[:-1]|map(attribute='path')|join('/') or '/' }}'">
+                <td><span class="file-icon">📂</span>..</td>
+                <td></td><td></td><td></td>
+            </tr>
+            {% endif %}
+
+            {% for item in items|sort(attribute='is_dir', reverse=True) %}
+            <tr>
+                <td onclick="{% if item.is_dir %}location.href='/server/{{ name }}/files?path={{ current_path.rstrip('/') }}/{{ item.name }}'{% else %}openEditor('{{ current_path.rstrip('/') }}/{{ item.name }}','{{ item.name }}'){% endif %}">
+                    <span class="file-icon">{% if item.is_dir %}📂{% else %}📄{% endif %}</span>
+                    {{ item.name }}
+                </td>
+                <td class="text-muted mono">
+                    {% if not item.is_dir %}
+                    {% if item.size < 1024 %}{{ item.size }} B
+                    {% elif item.size < 1048576 %}{{ (item.size/1024)|round(1) }} KB
+                    {% else %}{{ (item.size/1048576)|round(1) }} MB{% endif %}
+                    {% endif %}
+                </td>
+                <td class="text-muted text-sm">{{ item.modified|int|string }}</td>
+                <td onclick="event.stopPropagation()">
+                    <button class="btn btn-danger btn-sm" onclick="deletePath('{{ current_path.rstrip('/') }}/{{ item.name }}','{{ item.name }}')">🗑</button>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">Ordner ist leer</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- File Editor Modal -->
+<div class="editor-overlay" id="editor-overlay">
+    <div class="editor-modal">
+        <div class="editor-header">
+            <span class="card-title" id="editor-filename">–</span>
+            <button class="btn btn-ghost btn-sm" onclick="closeEditor()">✕</button>
+        </div>
+        <div class="editor-body">
+            <textarea class="editor-textarea" id="editor-content" spellcheck="false"></textarea>
+        </div>
+        <div class="editor-footer">
+            <button class="btn btn-ghost" onclick="closeEditor()">Abbrechen</button>
+            <button class="btn btn-primary" onclick="saveFile()">💾 Speichern</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const serverName = "{{ name }}";
+let currentEditPath = "";
+
+async function openEditor(path, name) {
+    if (!name.match(/\.(yml|yaml|toml|json|properties|txt|log|conf|cfg|sh|xml)$/i)) {
+        alert('Diese Datei kann nicht im Browser bearbeitet werden.');
+        return;
+    }
+    currentEditPath = path;
+    document.getElementById('editor-filename').textContent = name;
+    document.getElementById('editor-content').value = 'Lädt...';
+    document.getElementById('editor-overlay').classList.add('open');
+    try {
+        const res = await fetch(`/server/${serverName}/files/read?path=${encodeURIComponent(path)}`);
+        const data = await res.json();
+        document.getElementById('editor-content').value = data.content;
+    } catch(e) {
+        document.getElementById('editor-content').value = 'Fehler beim Laden.';
+    }
+}
+
+function closeEditor() {
+    document.getElementById('editor-overlay').classList.remove('open');
+}
+
+async function saveFile() {
+    const content = document.getElementById('editor-content').value;
+    const fd = new FormData();
+    fd.append('path', currentEditPath);
+    fd.append('content', content);
+    const res = await fetch(`/server/${serverName}/files/write`, { method: 'POST', body: fd });
+    if (res.ok) {
+        closeEditor();
+    } else {
+        alert('Speichern fehlgeschlagen.');
+    }
+}
+
+async function deletePath(path, name) {
+    if (!confirm(`'${name}' wirklich löschen?`)) return;
+    await fetch(`/server/${serverName}/files/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
+    location.reload();
+}
+
+async function uploadFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const status = document.getElementById('upload-status');
+    status.textContent = 'Lädt hoch...';
+    const fd = new FormData();
+    fd.append('path', "{{ current_path }}");
+    fd.append('file', file);
+    const res = await fetch(`/server/${serverName}/files/upload`, { method: 'POST', body: fd });
+    if (res.ok) {
+        status.textContent = '✅ Hochgeladen!';
+        setTimeout(() => location.reload(), 800);
+    } else {
+        const d = await res.json();
+        status.textContent = '❌ ' + (d.detail || 'Fehler');
+    }
+}
+</script>
+{% endblock %}

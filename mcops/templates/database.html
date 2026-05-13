@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Datenbank – MCOps{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">🗄 Globale Datenbank</div>
+        <div class="page-subtitle">Wird für neu erstellte Server verwendet, um Plugins (z.B. LuckPerms) automatisch zu konfigurieren.</div>
+    </div>
+</div>
+
+<div class="card" style="max-width: 600px;">
+    <div class="card-header">
+        <span class="card-title">MySQL / MariaDB Einstellungen</span>
+    </div>
+    <div class="card-body">
+        <form id="db-form">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Host / IP</label>
+                    <input type="text" class="form-control" name="db_host" id="db_host" value="{{ db_config.host }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Port</label>
+                    <input type="number" class="form-control" name="db_port" id="db_port" value="{{ db_config.port }}" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Datenbank-Name</label>
+                <input type="text" class="form-control" name="db_name" id="db_name" value="{{ db_config.name }}" required>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Benutzername</label>
+                    <input type="text" class="form-control" name="db_user" id="db_user" value="{{ db_config.user }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Passwort</label>
+                    <input type="password" class="form-control" name="db_password" id="db_password" value="{{ db_config.password }}" required>
+                </div>
+            </div>
+
+            <div id="db-result" style="margin-top:1rem"></div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border)">
+                <button type="button" class="btn btn-ghost" id="test-btn" onclick="testConnection()">🔌 Verbindung testen</button>
+                <button type="button" class="btn btn-primary" id="save-btn" onclick="saveDatabase()">💾 Speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function testConnection() {
+    const btn = document.getElementById('test-btn');
+    const result = document.getElementById('db-result');
+    const fd = new FormData(document.getElementById('db-form'));
+    
+    btn.disabled = true;
+    btn.textContent = 'Testet...';
+    
+    try {
+        const res = await fetch('/database/test', { method: 'POST', body: fd });
+        const data = await res.json();
+        
+        if (data.status === 'ok') {
+            result.innerHTML = `<div class="alert alert-success">✅ ${data.message}</div>`;
+        } else {
+            result.innerHTML = `<div class="alert alert-danger">❌ ${data.message}</div>`;
+        }
+    } catch (e) {
+        result.innerHTML = `<div class="alert alert-danger">❌ Netzwerkfehler beim Testen.</div>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔌 Verbindung testen';
+    }
+}
+
+async function saveDatabase() {
+    const btn = document.getElementById('save-btn');
+    const result = document.getElementById('db-result');
+    const fd = new FormData(document.getElementById('db-form'));
+    
+    btn.disabled = true;
+    btn.textContent = 'Speichert...';
+    
+    try {
+        const res = await fetch('/database/save', { method: 'POST', body: fd });
+        const data = await res.json();
+        
+        if (data.status === 'ok') {
+            result.innerHTML = `<div class="alert alert-success">✅ ${data.message}</div>`;
+        } else {
+            result.innerHTML = `<div class="alert alert-danger">❌ Speichern fehlgeschlagen.</div>`;
+        }
+    } catch (e) {
+        result.innerHTML = `<div class="alert alert-danger">❌ Netzwerkfehler beim Speichern.</div>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Speichern';
+        setTimeout(() => { if(result.innerHTML.includes('alert-success')) result.innerHTML = ''; }, 4000);
+    }
+}
+</script>
+{% endblock %}

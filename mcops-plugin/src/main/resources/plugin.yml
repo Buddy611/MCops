@@ -1,0 +1,10 @@
+name: MCOpsPlugin
+version: "1.0.0"
+main: de.mcops.MCOpsPlugin
+api-version: "1.21"
+description: MCOps Panel Integration - tracks player events and reports to the panel
+authors: [MCOps]
+website: http://localhost:8000
+
+commands: {}
+permissions: {}

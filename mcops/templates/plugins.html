@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Plugin Pool – MCOps{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">🔌 Plugin Pool</div>
+        <div class="page-subtitle">Globale Plugins – werden beim Server-Erstellen zugewiesen</div>
+    </div>
+    <label class="btn btn-primary" style="cursor:pointer">
+        📤 Plugin hochladen
+        <input type="file" id="upload-input" accept=".jar" style="display:none" onchange="uploadPlugin(this)">
+    </label>
+</div>
+
+<div id="upload-result" style="margin-bottom:1rem"></div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Installierte Plugins</span>
+        <span class="text-muted text-sm">{{ plugins|length }} Plugins</span>
+    </div>
+
+    {% if plugins %}
+    <table class="server-table">
+        <thead>
+            <tr>
+                <th>Dateiname</th>
+                <th>Größe</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plugin in plugins %}
+            <tr>
+                <td>
+                    <span style="margin-right:0.4rem">🔌</span>
+                    <span class="mono">{{ plugin.filename }}</span>
+                </td>
+                <td class="text-muted mono">
+                    {% if plugin.size_bytes < 1048576 %}
+                    {{ (plugin.size_bytes / 1024)|round(1) }} KB
+                    {% else %}
+                    {{ (plugin.size_bytes / 1048576)|round(1) }} MB
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deletePlugin('{{ plugin.filename }}', this)">🗑 Löschen</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center;padding:3rem;color:var(--text-muted)">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">🔌</div>
+        <p style="font-size:1rem;font-weight:500;color:var(--text)">Keine Plugins im Pool</p>
+        <p>Lade .jar Dateien hoch, um sie beim Erstellen neuer Server verfügbar zu machen.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function uploadPlugin(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const resultEl = document.getElementById('upload-result');
+    resultEl.innerHTML = '<div class="alert alert-info">⏳ Wird hochgeladen...</div>';
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/plugins/upload', { method: 'POST', body: fd });
+    if (res.ok) {
+        resultEl.innerHTML = '<div class="alert alert-success">✅ Plugin hochgeladen!</div>';
+        setTimeout(() => location.reload(), 800);
+    } else {
+        const d = await res.json();
+        resultEl.innerHTML = `<div class="alert alert-danger">❌ ${d.detail || 'Fehler'}</div>`;
+    }
+}
+
+async function deletePlugin(filename, btn) {
+    if (!confirm(`Plugin '${filename}' wirklich löschen?`)) return;
+    btn.disabled = true;
+    await fetch(`/plugins/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+    location.reload();
+}
+</script>
+{% endblock %}

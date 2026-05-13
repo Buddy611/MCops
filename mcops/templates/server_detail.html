@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}{{ name }} – MCOps{% endblock %}
+
+{% block head %}
+<style>
+.server-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.server-header-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.detail-grid { display: grid; grid-template-columns: 240px 1fr; gap: 1.5rem; }
+.info-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+.info-row:last-child { border-bottom: none; }
+.info-key { color: var(--text-muted); }
+.info-val { font-weight: 600; color: var(--text); font-family: 'JetBrains Mono','Fira Code',monospace; }
+.action-row { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="server-header">
+        {% set sw = info.software|lower %}
+        <div class="server-header-icon sw-{{ sw }}">
+            {% if sw == 'paper' %}P{% elif sw == 'velocity' %}V{% else %}F{% endif %}
+        </div>
+        <div>
+            <div class="page-title">{{ name }}</div>
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.2rem">
+                <span id="status-badge">
+                    {% if info.status == 'online' %}
+                    <span class="badge badge-online"><span class="dot"></span>Online</span>
+                    {% else %}
+                    <span class="badge badge-offline"><span class="dot"></span>Offline</span>
+                    {% endif %}
+                </span>
+                <span class="text-muted text-sm">{{ info.software|capitalize }} {{ info.version }} · Port {{ info.port }}</span>
+            </div>
+        </div>
+    </div>
+    <a href="/" class="btn btn-ghost">← Dashboard</a>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+    <a href="#" class="tab active" onclick="showTab('console',this)">🖥 Konsole</a>
+    <a href="/server/{{ name }}/files" class="tab">📁 Dateien</a>
+    <a href="/server/{{ name }}/settings" class="tab">⚙ Einstellungen</a>
+</div>
+
+<div id="tab-console">
+<div class="detail-grid">
+    <!-- Sidebar -->
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+        <!-- Info Card -->
+        <div class="card">
+            <div class="card-header"><span class="card-title">Server Info</span></div>
+            <div class="card-body" style="padding-top:0.5rem">
+                <div class="info-row"><span class="info-key">Software</span><span class="info-val">{{ info.software|capitalize }}</span></div>
+                <div class="info-row"><span class="info-key">Version</span><span class="info-val">{{ info.version }}</span></div>
+                <div class="info-row"><span class="info-key">Port</span><span class="info-val">{{ info.port }}</span></div>
+                <div class="info-row"><span class="info-key">RAM</span><span class="info-val">{{ info.ram_gb }} GB</span></div>
+            </div>
+        </div>
+
+        <!-- Power Controls -->
+        <div class="card">
+            <div class="card-header"><span class="card-title">Power</span></div>
+            <div class="card-body">
+                <div class="action-row">
+                    <button class="btn btn-success" onclick="doAction('start')">▶ Starten</button>
+                    <button class="btn btn-warning" onclick="doAction('restart')">🔄 Neustarten</button>
+                    <button class="btn btn-danger" onclick="doAction('stop')">⏹ Stoppen</button>
+                    <button class="btn btn-ghost btn-sm" onclick="doAction('kill')" style="margin-top:0.25rem">☠ Kill</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card">
+            <div class="card-header"><span class="card-title" style="color:var(--red)">⚠ Danger Zone</span></div>
+            <div class="card-body">
+                <button class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:0.5rem" onclick="doBackup()">
+                    💾 Backup erstellen
+                </button>
+                <button class="btn btn-danger btn-sm" style="width:100%" onclick="confirmDelete()">
+                    🗑 Server löschen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Live Konsole</span>
+            <div id="ws-status" class="badge badge-offline"><span class="dot"></span>Getrennt</div>
+        </div>
+        <div class="card-body" style="padding:0.75rem">
+            <div class="terminal">
+                <div class="terminal-output" id="terminal-output">Verbinde...</div>
+                <div class="terminal-input-row">
+                    <span class="terminal-prompt">$</span>
+                    <input class="terminal-input" id="terminal-input" placeholder="Befehl eingeben…" autocomplete="off">
+                    <button class="btn btn-primary btn-sm" onclick="sendCmd()">Senden</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="action-result" style="margin-top:1rem"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const serverName = "{{ name }}";
+
+// ─── WebSocket Terminal ───────────────────────
+const output = document.getElementById('terminal-output');
+const wsStatus = document.getElementById('ws-status');
+let ws;
+
+function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws/terminal/${serverName}`);
+
+    ws.onopen = () => {
+        wsStatus.className = 'badge badge-online';
+        wsStatus.innerHTML = '<span class="dot"></span>Verbunden';
+        appendLine('[MCOps] Verbunden mit Server-Konsole');
+    };
+
+    ws.onmessage = (e) => {
+        appendLine(e.data);
+    };
+
+    ws.onclose = () => {
+        wsStatus.className = 'badge badge-offline';
+        wsStatus.innerHTML = '<span class="dot"></span>Getrennt';
+        appendLine('[MCOps] Verbindung getrennt. Versuche neu...');
+        setTimeout(connectWS, 4000);
+    };
+
+    ws.onerror = () => {
+        appendLine('[MCOps] WebSocket Fehler.');
+    };
+}
+
+function appendLine(text) {
+    output.textContent += text + '\n';
+    output.scrollTop = output.scrollHeight;
+}
+
+function sendCmd() {
+    const inp = document.getElementById('terminal-input');
+    if (inp.value.trim() && ws && ws.readyState === 1) {
+        ws.send(inp.value);
+        inp.value = '';
+    }
+}
+
+document.getElementById('terminal-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendCmd();
+});
+
+connectWS();
+
+// ─── Power Actions ────────────────────────────
+async function doAction(action) {
+    const fd = new FormData();
+    fd.append('action', action);
+    const res = await fetch(`/server/${serverName}/action`, { method: 'POST', body: fd });
+    const data = await res.json();
+    updateBadge(data.status);
+    showResult(action, data.status);
+}
+
+function updateBadge(status) {
+    const el = document.getElementById('status-badge');
+    if (status === 'online') {
+        el.innerHTML = '<span class="badge badge-online"><span class="dot"></span>Online</span>';
+    } else if (status === 'stopping') {
+        el.innerHTML = '<span class="badge" style="background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,158,11,0.3)"><span class="dot" style="background:var(--yellow)"></span>Stoppt...</span>';
+        setTimeout(() => {
+            el.innerHTML = '<span class="badge badge-offline"><span class="dot"></span>Offline</span>';
+        }, 4000);
+    } else {
+        el.innerHTML = '<span class="badge badge-offline"><span class="dot"></span>Offline</span>';
+    }
+}
+
+function showResult(action, status) {
+    const el = document.getElementById('action-result');
+    el.innerHTML = `<div class="alert alert-info">Aktion '${action}' ausgeführt – Status: ${status}</div>`;
+    setTimeout(() => el.innerHTML = '', 3000);
+}
+
+async function doBackup() {
+    const res = await fetch(`/server/${serverName}/backup`, { method: 'POST' });
+    const data = await res.json();
+    const el = document.getElementById('action-result');
+    el.innerHTML = `<div class="alert alert-success">💾 Backup erstellt: ${data.backup_path || 'OK'}</div>`;
+    setTimeout(() => el.innerHTML = '', 5000);
+}
+
+async function confirmDelete() {
+    if (!confirm(`Server '${serverName}' wirklich löschen?\nAlle Dateien werden entfernt!`)) return;
+    await fetch(`/server/${serverName}`, { method: 'DELETE' });
+    location.href = '/';
+}
+
+// ─── Tabs ─────────────────────────────────────
+function showTab(id, el) {
+    document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+    document.getElementById(`tab-${id}`).style.display = '';
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    return false;
+}
+</script>
+{% endblock %}
