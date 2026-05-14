@@ -36,7 +36,10 @@
         <div>
             <div class="page-title">{{ name }}</div>
             <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.2rem">
-                <span id="status-badge">
+                <span id="status-badge"
+                    hx-get="/server/{{ name }}/status" 
+                    hx-trigger="load, every 5s" 
+                    hx-swap="innerHTML">
                     {% if info.status == 'online' %}
                     <span class="badge badge-online"><span class="dot"></span>Online</span>
                     {% else %}

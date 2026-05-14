@@ -3,6 +3,8 @@ import sys
 import json
 import logging
 import shutil
+import subprocess
+import signal
 from pathlib import Path
 
 # libtmux is Linux-only
@@ -63,19 +65,53 @@ def _find_session(tmux, session_name: str):
     return None
 
 
+def is_process_running(pid: int) -> bool:
+    if not pid:
+        return False
+    if sys.platform == "win32":
+        try:
+            # Query process list on Windows
+            output = subprocess.check_output(["tasklist", "/FI", f"PID eq {pid}"], encoding="utf-8", stderr=subprocess.STDOUT)
+            return str(pid) in output
+        except Exception:
+            return False
+    else:
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+
+
 def get_server_status(name: str) -> str:
     """Returns 'online' or 'offline'."""
+    if sys.platform == "win32":
+        registry = load_registry()
+        info = registry.get(name, {})
+        pid = info.get("pid")
+        return "online" if is_process_running(pid) else "offline"
+    
     tmux = _get_tmux_server()
     if not tmux:
-        return "offline"
+        # Fallback to PID if tmux is missing even on Linux
+        registry = load_registry()
+        pid = registry.get(name, {}).get("pid")
+        return "online" if is_process_running(pid) else "offline"
+        
     return "online" if _find_session(tmux, f"mc_{name}") else "offline"
 
 
 def get_all_statuses(registry: dict) -> dict:
-    """Returns status for all servers in one tmux call."""
+    """Returns status for all servers."""
+    if sys.platform == "win32":
+        return {name: ("online" if is_process_running(info.get("pid")) else "offline")
+                for name, info in registry.items()}
+                
     tmux = _get_tmux_server()
     if not tmux:
-        return {name: "offline" for name in registry}
+        return {name: ("online" if is_process_running(info.get("pid")) else "offline")
+                for name, info in registry.items()}
+                
     try:
         active_sessions = {s.name for s in tmux.sessions}
     except Exception:
@@ -160,12 +196,13 @@ def create_server(
         "ram_gb": ram_gb,
         "port": port,
         "plugins": plugins,
+        "pid": None
     }
     save_registry(registry)
 
     # 9. Start
     if start_after_creation:
-        start_server_tmux(server_name, ram_gb, software)
+        start_server(server_name, ram_gb, software)
 
     # 10. Velocity auto-register (skip for Velocity itself)
     if software.lower() != "velocity":
@@ -181,8 +218,11 @@ def _get_java_path(mc_version: str) -> str:
     import re
     import shutil as _shutil
 
-    # Default paths on Debian/Ubuntu
-    java_paths = {
+    # 1. Try 'java' from PATH first (most common for Windows users)
+    java_in_path = _shutil.which("java")
+    
+    # Default paths on Debian/Ubuntu (only relevant for Linux)
+    java_paths_linux = {
         21: "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
         17: "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
         11: "/usr/lib/jvm/java-11-openjdk-amd64/bin/java",
@@ -190,14 +230,16 @@ def _get_java_path(mc_version: str) -> str:
     }
 
     def get_installed(v):
-        p = java_paths.get(v)
-        if p and os.path.exists(p): return p
-        # Fallback to which
-        return _shutil.which(f"java-{v}") or _shutil.which("java")
+        if sys.platform != "win32":
+            p = java_paths_linux.get(v)
+            if p and os.path.exists(p): return p
+        
+        # Cross-platform check for version-specific binaries if they exist
+        return _shutil.which(f"java-{v}") or java_in_path or "java"
 
     try:
         match = re.search(r'(\d+)\.(\d+)(\.(\d+))?', mc_version)
-        if not match: return _shutil.which("java") or "/usr/bin/java"
+        if not match: return java_in_path or "java"
         
         minor = int(match.group(2))
         patch = int(match.group(4)) if match.group(4) else 0
@@ -208,13 +250,76 @@ def _get_java_path(mc_version: str) -> str:
         # 1.17 - 1.20.4 -> Java 17
         if minor >= 17:
             return get_installed(17)
-        # 1.16 -> Java 11 (or 16, but 11 is common)
+        # 1.16 -> Java 11
         if minor >= 16:
             return get_installed(11)
         # < 1.16 -> Java 8
         return get_installed(8)
     except Exception:
-        return _shutil.which("java") or "/usr/bin/java"
+        return java_in_path or "java"
+
+
+def start_server(server_name: str, ram_gb: int, software: str = "paper") -> bool:
+    if sys.platform == "win32":
+        return start_server_process(server_name, ram_gb, software)
+    
+    tmux = _get_tmux_server()
+    if not tmux:
+        log.warning("libtmux not available – using direct process fallback.")
+        return start_server_process(server_name, ram_gb, software)
+        
+    return start_server_tmux(server_name, ram_gb, software)
+
+
+def start_server_process(server_name: str, ram_gb: int, software: str = "paper") -> bool:
+    """Direct process start fallback (for Windows or Linux without tmux)."""
+    instance_dir = INSTANCES_DIR / server_name
+    registry = load_registry()
+    mc_version = registry.get(server_name, {}).get("version", "1.21.2")
+    java_bin = _get_java_path(mc_version)
+
+    log.info(f"Starting {server_name} as direct process (MC {mc_version})")
+
+    # Command as list for subprocess
+    cmd = [
+        java_bin,
+        f"-Xmx{ram_gb}G",
+        "-Xms512M",
+        "-XX:+UseG1GC",
+        "-XX:+ParallelRefProcEnabled",
+        "-jar", "server.jar",
+        "nogui"
+    ]
+
+    try:
+        # Start detached
+        if sys.platform == "win32":
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(instance_dir),
+                creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.DETACHED_PROCESS,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL
+            )
+        else:
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(instance_dir),
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL
+            )
+        
+        # Save PID
+        registry[server_name]["pid"] = proc.pid
+        save_registry(registry)
+        log.info(f"Started {server_name} with PID {proc.pid}")
+        return True
+    except Exception as e:
+        log.error(f"Process start failed for {server_name}: {e}")
+        return False
 
 
 def start_server_tmux(server_name: str, ram_gb: int, software: str = "paper") -> bool:
@@ -228,7 +333,6 @@ def start_server_tmux(server_name: str, ram_gb: int, software: str = "paper") ->
 
     tmux = _get_tmux_server()
     if not tmux:
-        log.warning("libtmux not available – cannot start server.")
         return False
 
     session_name = f"mc_{server_name}"
@@ -261,6 +365,38 @@ def start_server_tmux(server_name: str, ram_gb: int, software: str = "paper") ->
         return False
 
 
+def stop_server(server_name: str, software: str = "paper") -> bool:
+    if sys.platform == "win32":
+        return stop_server_process(server_name)
+    
+    tmux = _get_tmux_server()
+    if not tmux:
+        return stop_server_process(server_name)
+        
+    return stop_server_tmux(server_name, software)
+
+
+def stop_server_process(server_name: str) -> bool:
+    """Stops a server by killing its process (fallback)."""
+    registry = load_registry()
+    pid = registry.get(server_name, {}).get("pid")
+    if not pid or not is_process_running(pid):
+        return False
+
+    try:
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], check=True, capture_output=True)
+        else:
+            os.kill(pid, signal.SIGTERM)
+        
+        registry[server_name]["pid"] = None
+        save_registry(registry)
+        return True
+    except Exception as e:
+        log.error(f"Stop process failed for {server_name}: {e}")
+        return False
+
+
 def stop_server_tmux(server_name: str, software: str = "paper") -> bool:
     tmux = _get_tmux_server()
     if not tmux:
@@ -279,10 +415,14 @@ def stop_server_tmux(server_name: str, software: str = "paper") -> bool:
         return False
 
 
-def kill_server_tmux(server_name: str) -> bool:
+def kill_server(server_name: str) -> bool:
+    if sys.platform == "win32":
+        return stop_server_process(server_name)
+        
     tmux = _get_tmux_server()
     if not tmux:
-        return False
+        return stop_server_process(server_name)
+
     session = _find_session(tmux, f"mc_{server_name}")
     if session:
         try:
@@ -294,11 +434,11 @@ def kill_server_tmux(server_name: str) -> bool:
     return False
 
 
-def restart_server_tmux(server_name: str, ram_gb: int, software: str = "paper") -> bool:
-    stop_server_tmux(server_name, software)
+def restart_server(server_name: str, ram_gb: int, software: str = "paper") -> bool:
+    stop_server(server_name, software)
     import time as _time
     _time.sleep(4)
-    return start_server_tmux(server_name, ram_gb, software)
+    return start_server(server_name, ram_gb, software)
 
 
 def delete_server(server_name: str, remove_files: bool = True) -> bool:
@@ -309,7 +449,7 @@ def delete_server(server_name: str, remove_files: bool = True) -> bool:
     info = registry[server_name]
 
     # Stop if running
-    stop_server_tmux(server_name, info.get("software", "paper"))
+    stop_server(server_name, info.get("software", "paper"))
 
     # Remove from Velocity
     remove_server_from_velocity(server_name)

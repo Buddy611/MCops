@@ -1,26 +1,48 @@
-# MCOps Panel
+# 🛡️ MCOps Panel
+**Lightweight, robust, and Docker-free Minecraft Server Management.**
 
-**Minecraft server management panel – no Docker, no overhead.**
+MCOps is a modern, high-performance management panel for Minecraft networks. It focuses on speed, simplicity, and deep integration with system tools like `tmux` and `systemd`, eliminating the overhead of containerization.
 
 ---
 
-## ⚡ Installation (1 Command)
+## 🚀 Quick Start
+
+### 🐧 Linux (Recommended)
+The one-command installer handles everything: dependencies, database setup, and service registration.
 
 ```bash
+# Clone and install in one go
 git clone https://github.com/Buddy611/MCops /tmp/mcops && cd /tmp/mcops && sudo bash install.sh
 ```
 
-Or, if you already have the files:
+**What the installer does:**
+* ✅ **System Core:** Installs Python 3, tmux, Java 21, MariaDB, and Gradle.
+* ✅ **Database:** Fully configures a local **MariaDB instance** for your network.
+* ✅ **Security:** Creates a dedicated `mcops` system user and generates a unique **128-bit API Key**.
+* ✅ **Service:** Registers and starts the `mcops.service` via Systemd.
+
+### 🪟 Windows
+MCOps is fully compatible with Windows. Use the `setup.bat` for a quick environment setup.
+
+1.  **Clone the Repo** or download the ZIP.
+2.  **Run `setup.bat`**: This creates a virtual environment and installs dependencies.
+3.  **Start the Panel**:
+    ```cmd
+    call venv\Scripts\activate
+    set MCOPS_API_KEY=your_key
+    python mcops\main.py
+    ```
+
+### 🗑️ Uninstallation
+Need a clean slate? The uninstaller removes everything safely.
 
 ```bash
-sudo bash install.sh
-
-```
-Uninstallation:
-
-```bash
+# Run the uninstaller from the repo directory (Linux)
 sudo bash uninstall.sh
 ```
+*⚠️ Warning: This will permanently delete all panel data, server instances, and databases.*
+
+---
 
 The script automatically performs the following:
 

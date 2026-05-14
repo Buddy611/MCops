@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 # Use local directory if running on Windows (for testing), else /home/mcserver
 if sys.platform == "win32":

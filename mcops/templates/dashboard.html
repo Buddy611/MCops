@@ -86,7 +86,10 @@
                 <td class="mono text-muted">{{ info.version }}</td>
                 <td class="mono">{{ info.port }}</td>
                 <td>{{ info.ram_gb }} GB</td>
-                <td id="status-{{ name }}">
+                <td id="status-{{ name }}" 
+                    hx-get="/server/{{ name }}/status" 
+                    hx-trigger="load, every 5s" 
+                    hx-swap="innerHTML">
                     {% if info.status == 'online' %}
                     <span class="badge badge-online"><span class="dot"></span>Online</span>
                     {% else %}

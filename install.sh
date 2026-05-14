@@ -161,28 +161,8 @@ ENVEOF
 [[ -f "$BASE_DIR/global/server_registry.json" ]] || echo '{}' > "$BASE_DIR/global/server_registry.json"
 
 cat > "$BASE_DIR/global/injection_rules.json" << 'JSONEOF'
-{
-  "plugins/LuckPerms/config.yml": "luckperms_config.yml.j2"
-}
+{}
 JSONEOF
-
-# Create LuckPerms template
-cat > "$BASE_DIR/global/plugin-templates/luckperms_config.yml.j2" << 'LPEOF'
-server-name: "mcops_{{ DB_NAME }}"
-storage-method: MariaDB
-data:
-  address: "{{ DB_HOST }}:{{ DB_PORT }}"
-  database: "{{ DB_NAME }}"
-  username: "{{ DB_USER }}"
-  password: "{{ DB_PASSWORD }}"
-  pool-settings:
-    maximum-pool-size: 10
-    minimum-idle: 10
-    maximum-lifetime: 1800000
-    connection-timeout: 5000
-  table-prefix: "luckperms_"
-messaging-service: "sql"
-LPEOF
 
 
 # Entrypoint
@@ -228,10 +208,7 @@ ok "Python packages installed"
 # ════════════════════════════════════════════════════════════════════════
 step "6/7 – Preparing Plugin Pool"
 # ════════════════════════════════════════════════════════════════════════
-info "Downloading LuckPerms (Open source base for network sync)..."
-wget -q "https://download.luckperms.net/1575/bukkit/loader/LuckPerms-Bukkit-5.4.150.jar" -O "$BASE_DIR/plugin-pool/LuckPerms-Bukkit.jar" || true
-wget -q "https://download.luckperms.net/1575/velocity/LuckPerms-Velocity-5.4.150.jar" -O "$BASE_DIR/plugin-pool/LuckPerms-Velocity.jar" || true
-ok "LuckPerms downloaded"
+ok "Plugin pool ready"
 
 # ════════════════════════════════════════════════════════════════════════
 step "7/7 – Setting up & starting Systemd Service"

@@ -31,24 +31,29 @@ async def stats_task():
 # ─────────────────────────────────────────────
 update_info = {"latest_version": None, "available": False}
 
-async def update_check_task():
+async def check_for_updates():
     global update_info
     import httpx
     import re
     from mcops.config import VERSION
+    try:
+        async with httpx.AsyncClient() as client:
+            # Use a timestamp to bypass GitHub cache
+            res = await client.get("https://raw.githubusercontent.com/Buddy611/MCops/main/mcops/config.py", timeout=10)
+            if res.status_code == 200:
+                match = re.search(r'VERSION\s*=\s*"([^"]+)"', res.text)
+                if match:
+                    latest = match.group(1)
+                    update_info["latest_version"] = latest
+                    update_info["available"] = (latest != VERSION)
+                    log.info(f"Update check: Local={VERSION}, Remote={latest}")
+    except Exception as e:
+        log.error(f"Update check error: {e}")
+
+async def update_check_task():
     while True:
-        try:
-            async with httpx.AsyncClient() as client:
-                res = await client.get("https://raw.githubusercontent.com/Buddy611/MCops/main/mcops/config.py", timeout=10)
-                if res.status_code == 200:
-                    match = re.search(r'VERSION\s*=\s*"([^"]+)"', res.text)
-                    if match:
-                        latest = match.group(1)
-                        update_info["latest_version"] = latest
-                        update_info["available"] = (latest != VERSION)
-        except Exception as e:
-            log.error(f"Update check error: {e}")
-        await asyncio.sleep(86400) # Once a day
+        await check_for_updates()
+        await asyncio.sleep(3600) # Check every hour
 
 
 @asynccontextmanager
@@ -109,6 +114,7 @@ async def create_server_form(request: Request):
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
+    await check_for_updates()
     import platform
     import sys
     sys_info = {
