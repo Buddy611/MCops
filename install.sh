@@ -56,12 +56,18 @@ apt-get install -y -qq \
     tmux \
     curl wget unzip zip \
     sqlite3 \
-    mariadb-server \
-    gradle \
-    2>/dev/null || true
+    mariadb-server gradle \
+    software-properties-common || true
 
-# Install multiple Java versions for different MC versions
-info "Installing Java 8, 11, 17, 21..."
+# On Ubuntu, add the openjdk-r/ppa for older java versions
+if command -v add-apt-repository &>/dev/null && grep -qi "ubuntu" /etc/os-release; then
+    info "Ubuntu detected. Adding PPA for older Java versions..."
+    add-apt-repository -y ppa:openjdk-r/ppa
+    apt-get update -y -qq
+fi
+
+# Try to install multiple Java versions
+info "Installing Java versions (8, 11, 17, 21)..."
 for v in 8 11 17 21; do
     apt-get install -y -qq "openjdk-${v}-jdk" 2>/dev/null || warn "Could not install Java ${v}"
 done
