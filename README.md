@@ -245,3 +245,9 @@ curl -X POST http://localhost:8000/api/stats/event \
     "server": "Your_Server_Name"
   }'
 ```
+
+---
+
+*Made with ai, use with caution*
+*Open Beta, not fully working*
+*Would love for a real dev to make it better :D*
