@@ -28,6 +28,7 @@ MCOps is fully compatible with Windows. Use the `setup.bat` for a quick environm
     python mcops\main.py
     ```
 
+
 **What the installer does:**
 
 * ✅ Installs system packages (Python 3, tmux, Java 21, MariaDB, Gradle)
