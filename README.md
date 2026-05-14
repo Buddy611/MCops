@@ -29,6 +29,7 @@ MCOps is fully compatible with Windows. Use the `setup.bat` for a quick environm
     ```
 
 
+
 **What the installer does:**
 
 * ✅ Installs system packages (Python 3, tmux, Java 21, MariaDB, Gradle)
@@ -41,6 +42,7 @@ MCOps is fully compatible with Windows. Use the `setup.bat` for a quick environm
 
 The panel will be accessible at `http://SERVER-IP:8000` after approximately 1–2 minutes.
 
+---
 
 ### 🗑️ Uninstallation
 Need a clean slate? The uninstaller removes everything safely.
