@@ -28,27 +28,35 @@ echo
 [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
 
 # 1. Stop service
-step "1/6 – Stopping MCOps Service"
+step "1/7 – Stopping MCOps Service"
 systemctl stop mcops 2>/dev/null || true
 systemctl disable mcops 2>/dev/null || true
 rm -f /etc/systemd/system/mcops.service
 systemctl daemon-reload
 ok "Service stopped and removed"
 
-# 2. Stop Minecraft servers (tmux)
-step "2/6 – Stopping all Minecraft servers"
+# 2. Kill all processes of the mcops user
+step "2/7 – Terminating all MCOps processes"
+if id "$MCOPS_USER" &>/dev/null; then
+    pkill -u "$MCOPS_USER" || true
+    sleep 2
+    pkill -9 -u "$MCOPS_USER" || true
+    ok "All processes for user $MCOPS_USER terminated"
+fi
+
+# 3. Stop Minecraft servers (tmux)
+step "3/7 – Stopping all Minecraft servers"
 if command -v tmux &>/dev/null; then
-    # Kill all sessions starting with mc_
     sessions=$(tmux ls -F '#S' 2>/dev/null | grep '^mc_' || true)
     for s in $sessions; do
-        tmux kill-session -t "$s"
+        tmux kill-session -t "$s" 2>/dev/null || true
         ok "Killed session $s"
     done
 fi
 ok "All tmux sessions handled"
 
-# 3. Database
-step "3/6 – Removing MariaDB Database & User"
+# 4. Database
+step "4/7 – Removing MariaDB Database & User"
 mysql -u root <<SQLEOF || warn "Could not remove database. Maybe MariaDB is not running?"
 DROP DATABASE IF EXISTS \`${DB_NAME}\`;
 DROP USER IF EXISTS '${DB_USER}'@'localhost';
@@ -56,23 +64,22 @@ FLUSH PRIVILEGES;
 SQLEOF
 ok "Database and user removed"
 
-# 4. User
-step "4/6 – Removing System User"
+# 5. User
+step "5/7 – Removing System User"
 if id "$MCOPS_USER" &>/dev/null; then
-    userdel -r "$MCOPS_USER" 2>/dev/null || userdel -f "$MCOPS_USER"
+    userdel -r -f "$MCOPS_USER" 2>/dev/null || true
     ok "User '$MCOPS_USER' removed"
 else
     ok "User '$MCOPS_USER' does not exist"
 fi
 
-# 5. Directories
-step "5/6 – Deleting Files"
-if [[ -d "$BASE_DIR" ]]; then
-    rm -rf "$BASE_DIR"
-    ok "Directory $BASE_DIR deleted"
-fi
+# 6. Directories
+step "6/7 – Deleting Files"
+[[ -d "$BASE_DIR" ]] && rm -rf "$BASE_DIR" && ok "Directory $BASE_DIR deleted"
+[[ -d "/tmp/mcops" ]] && rm -rf "/tmp/mcops" && ok "Temporary install directory /tmp/mcops deleted"
 
-# 6. Final cleanup
-step "6/6 – Finalizing"
+# 7. Final cleanup
+step "7/7 – Finalizing"
 ok "MCOps has been completely removed from your system."
+echo -e "  You can now reinstall using the 1-command installer."
 echo ""
