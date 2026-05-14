@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = "2.0.1"
+VERSION = "2.0.2"
 
 # The base directory where all server data resides.
 # In production, this is usually /opt/mcops.
