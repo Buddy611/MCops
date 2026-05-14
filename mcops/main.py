@@ -415,6 +415,37 @@ async def api_create_server(req: CreateServerRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class ServerActionRequest(BaseModel):
+    api_key: str
+    action: str
+
+@app.post("/api/server/{name}/action")
+async def api_server_action(name: str, req: ServerActionRequest):
+    import os
+    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
+    if req.api_key != valid_key:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+        
+    registry = server_creator.load_registry()
+    if name not in registry:
+        raise HTTPException(status_code=404, detail="Server not found")
+        
+    info = registry[name]
+    software = info.get("software", "paper")
+    ram_gb = info.get("ram_gb", 2)
+    
+    if req.action == "start":
+        ok = server_creator.start_server_tmux(name, ram_gb, software)
+        return {"status": "online" if ok else "offline"}
+    elif req.action == "stop":
+        server_creator.stop_server_tmux(name, software)
+        return {"status": "stopping"}
+    elif req.action == "restart":
+        ok = server_creator.restart_server_tmux(name, ram_gb, software)
+        return {"status": "online" if ok else "offline"}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+
 
 # ─────────────────────────────────────────────
 # DATABASE MANAGEMENT
@@ -472,13 +503,19 @@ async def test_db_connection(
 # ─────────────────────────────────────────────
 
 class PlayerEventRequest(BaseModel):
+    api_key: str
     player: str
     event: str      # "join" or "quit"
     server: str
 
 @app.post("/api/stats/event")
 async def record_player_event(req: PlayerEventRequest):
-    """Called by the MCOps Bukkit plugin on player join/quit."""
+    """Called by the MCOps plugins on player join/quit."""
+    import os
+    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
+    if req.api_key != valid_key:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+        
     if req.event not in ("join", "quit"):
         raise HTTPException(status_code=400, detail="event must be 'join' or 'quit'")
     from datetime import datetime
@@ -487,7 +524,12 @@ async def record_player_event(req: PlayerEventRequest):
 
 
 @app.get("/api/stats")
-async def get_stats():
+async def get_stats(api_key: str = ""):
+    import os
+    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
+    if api_key != valid_key:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+        
     return {
         "current_players": stats_manager.get_current_player_count(),
         "online_players":  stats_manager.get_online_players(),

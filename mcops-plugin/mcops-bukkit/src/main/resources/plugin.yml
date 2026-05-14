@@ -1,0 +1,8 @@
+name: MCOpsPlugin
+version: 1.0.0
+main: de.mcops.bukkit.MCOpsBukkit
+api-version: "1.21"
+commands:
+  mcops:
+    description: MCOps Panel API commands
+    permission: mcops.admin

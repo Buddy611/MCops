@@ -145,8 +145,33 @@ DB_NAME=${DB_NAME}
 ENVEOF
 
 # Default JSON files
+# Default JSON files
 [[ -f "$BASE_DIR/global/server_registry.json" ]] || echo '{}' > "$BASE_DIR/global/server_registry.json"
-[[ -f "$BASE_DIR/global/injection_rules.json" ]] || echo '{}' > "$BASE_DIR/global/injection_rules.json"
+
+cat > "$BASE_DIR/global/injection_rules.json" << 'JSONEOF'
+{
+  "plugins/LuckPerms/config.yml": "luckperms_config.yml.j2"
+}
+JSONEOF
+
+# Create LuckPerms template
+cat > "$BASE_DIR/global/plugin-templates/luckperms_config.yml.j2" << 'LPEOF'
+server-name: "mcops_{{ DB_NAME }}"
+storage-method: MariaDB
+data:
+  address: "{{ DB_HOST }}:{{ DB_PORT }}"
+  database: "{{ DB_NAME }}"
+  username: "{{ DB_USER }}"
+  password: "{{ DB_PASSWORD }}"
+  pool-settings:
+    maximum-pool-size: 10
+    minimum-idle: 10
+    maximum-lifetime: 1800000
+    connection-timeout: 5000
+  table-prefix: "luckperms_"
+messaging-service: "sql"
+LPEOF
+
 
 # Entrypoint
 cat > "$PANEL_DIR/run.py" << 'PYEOF'
@@ -198,24 +223,24 @@ if [[ -d "$PLUGIN_SRC" ]]; then
 
     # Use system gradle or download wrapper
     if command -v gradle &>/dev/null; then
-        info "Kompiliere Plugin mit System-Gradle..."
-        gradle jar --no-daemon --quiet 2>/dev/null && \
-            PLUGIN_JAR=$(find build/libs -name "*.jar" | head -1)
+        info "Kompiliere Plugins mit System-Gradle..."
+        gradle build --no-daemon --quiet 2>/dev/null
     else
         # Fallback: download gradle wrapper
         info "Lade Gradle Wrapper herunter..."
         wget -q "https://services.gradle.org/distributions/gradle-8.5-bin.zip" -O /tmp/gradle.zip
         unzip -q /tmp/gradle.zip -d /tmp/
         GRADLE_BIN=$(ls -d /tmp/gradle-*/bin/gradle | head -1)
-        "$GRADLE_BIN" jar --no-daemon --quiet 2>/dev/null && \
-            PLUGIN_JAR=$(find build/libs -name "*.jar" | head -1)
+        "$GRADLE_BIN" build --no-daemon --quiet 2>/dev/null
     fi
 
-    if [[ -n "${PLUGIN_JAR:-}" && -f "$PLUGIN_JAR" ]]; then
-        cp "$PLUGIN_JAR" "$BASE_DIR/plugin-pool/MCOpsPlugin-1.0.0.jar"
-        ok "MCOpsPlugin-1.0.0.jar → $BASE_DIR/plugin-pool/"
+    if [[ -f "mcops-bukkit/build/libs/MCOpsPlugin-Paper.jar" ]]; then
+        cp "mcops-bukkit/build/libs/MCOpsPlugin-Paper.jar" "$BASE_DIR/plugin-pool/"
+        cp "mcops-velocity/build/libs/MCOpsPlugin-Velocity.jar" "$BASE_DIR/plugin-pool/"
+        cp "mcops-fabric/build/libs/MCOpsPlugin-Fabric.jar" "$BASE_DIR/plugin-pool/"
+        ok "MCOpsPlugin JARs (Paper, Velocity, Fabric) → $BASE_DIR/plugin-pool/"
     else
-        warn "Plugin-Build fehlgeschlagen. Manuell kompilieren: cd $PLUGIN_BUILD_DIR && gradle jar"
+        warn "Plugin-Build fehlgeschlagen. Manuell kompilieren: cd $PLUGIN_BUILD_DIR && gradle build"
         # Create a marker so the UI knows
         echo "BUILD_FAILED" > "$BASE_DIR/plugin-pool/.mcops-plugin-build-failed"
     fi
@@ -224,6 +249,11 @@ if [[ -d "$PLUGIN_SRC" ]]; then
 else
     warn "mcops-plugin Verzeichnis nicht gefunden – Plugin-Build übersprungen."
 fi
+
+info "Lade LuckPerms (Open Source Basis für Netzwerksynchronisation) herunter..."
+wget -q "https://download.luckperms.net/1575/bukkit/loader/LuckPerms-Bukkit-5.4.150.jar" -O "$BASE_DIR/plugin-pool/LuckPerms-Bukkit.jar" || true
+wget -q "https://download.luckperms.net/1575/velocity/LuckPerms-Velocity-5.4.150.jar" -O "$BASE_DIR/plugin-pool/LuckPerms-Velocity.jar" || true
+ok "LuckPerms heruntergeladen"
 
 # ════════════════════════════════════════════════════════════════════════
 step "7/7 – Systemd Service einrichten & starten"

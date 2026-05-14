@@ -1,0 +1,12 @@
+# MCOps Plugin Configuration
+# ─────────────────────────────────────────────
+
+# URL of your MCOps panel (no trailing slash)
+panel-url: "http://localhost:8000"
+
+# Name of this server (used in stats)
+# Leave empty to use the server name from server.properties
+server-name: ""
+
+# Enable/disable reporting (disable for maintenance)
+enabled: true

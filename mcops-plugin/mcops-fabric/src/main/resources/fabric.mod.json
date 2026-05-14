@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "mcopsplugin",
+  "version": "1.0.0",
+  "name": "MCOpsPlugin",
+  "description": "MCOps Panel API commands",
+  "authors": [
+    "MCOps"
+  ],
+  "contact": {
+    "homepage": "https://mcops.de"
+  },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "de.mcops.fabric.MCOpsFabric"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.2",
+    "minecraft": ">=1.21.1",
+    "fabric-api": "*"
+  }
+}

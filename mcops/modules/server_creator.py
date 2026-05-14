@@ -15,7 +15,7 @@ if sys.platform != "win32":
 else:
     _LIBTMUX_AVAILABLE = False
 
-from mcops.config import INSTANCES_DIR, TEMPLATES_DIR, SERVER_REGISTRY_FILE, BACKUPS_DIR
+from mcops.config import INSTANCES_DIR, TEMPLATES_DIR, SERVER_REGISTRY_FILE, BACKUPS_DIR, DB_CONFIG_FILE
 from mcops.modules.version_fetcher import get_latest_build_url, download_jar
 from mcops.modules.plugin_manager import copy_plugin_to_instance
 from mcops.modules.db_injector import inject_database_credentials
@@ -141,11 +141,52 @@ def create_server(
                     shutil.copy2(item, instance_dir / item.name)
 
     # 6. Plugins
+    is_mod = (software.lower() == "fabric")
     for plugin in plugins:
-        copy_plugin_to_instance(plugin, server_name)
+        copy_plugin_to_instance(plugin, server_name, is_mod=is_mod)
+        
+    # 6.5 Auto-inject MCOpsPlugin and generate config
+    mcops_plugin_name = ""
+    if software.lower() == "paper":
+        mcops_plugin_name = "MCOpsPlugin-Paper"
+    elif software.lower() == "velocity":
+        mcops_plugin_name = "MCOpsPlugin-Velocity"
+    elif software.lower() == "fabric":
+        mcops_plugin_name = "MCOpsPlugin-Fabric"
+        
+    if mcops_plugin_name:
+        copy_plugin_to_instance(mcops_plugin_name, server_name, is_mod=is_mod)
+        
+    import os
+    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
+    port_panel = os.environ.get("MCOPS_PORT", "8000")
+    panel_url = f"http://127.0.0.1:{port_panel}"
+    
+    if is_mod:
+        config_dir = instance_dir / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / "mcops.json").write_text(json.dumps({
+            "panel-url": panel_url,
+            "api-key": valid_key,
+            "server-name": server_name,
+            "enabled": True
+        }, indent=2))
+    else:
+        config_dir = instance_dir / "plugins" / "MCOpsPlugin"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / "config.yml").write_text(
+            f"panel-url: '{panel_url}'\n"
+            f"api-key: '{valid_key}'\n"
+            f"server-name: '{server_name}'\n"
+            f"enabled: true\n"
+        )
 
     # 7. DB Injection
     inject_database_credentials(server_name)
+    
+    # 7.5 Global Database Credentials (available to all plugins/scripts in server root)
+    if DB_CONFIG_FILE.exists():
+        shutil.copy2(DB_CONFIG_FILE, instance_dir / ".env")
 
     # 8. Registry
     registry = load_registry()

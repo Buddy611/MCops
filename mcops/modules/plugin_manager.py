@@ -28,13 +28,14 @@ def find_plugin_in_pool(plugin_name: str) -> Path | None:
                 return file
     return None
 
-def copy_plugin_to_instance(plugin_name: str, server_name: str) -> bool:
-    """Copies a plugin from the pool to the instance's plugin folder."""
+def copy_plugin_to_instance(plugin_name: str, server_name: str, is_mod: bool = False) -> bool:
+    """Copies a plugin from the pool to the instance's plugin/mods folder."""
     pool_plugin_path = find_plugin_in_pool(plugin_name)
     if not pool_plugin_path:
         return False
         
-    instance_plugin_dir = INSTANCES_DIR / server_name / "plugins"
+    folder_name = "mods" if is_mod else "plugins"
+    instance_plugin_dir = INSTANCES_DIR / server_name / folder_name
     instance_plugin_dir.mkdir(parents=True, exist_ok=True)
     
     dest_path = instance_plugin_dir / pool_plugin_path.name
