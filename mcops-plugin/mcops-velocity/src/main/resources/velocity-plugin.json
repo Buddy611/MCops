@@ -1,7 +1,0 @@
-{
-  "id": "mcopsplugin",
-  "name": "MCOpsPlugin",
-  "version": "1.0.0",
-  "description": "MCOps Panel API commands",
-  "main": "de.mcops.velocity.MCOpsVelocity"
-}

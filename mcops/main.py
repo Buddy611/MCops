@@ -158,15 +158,7 @@ async def server_action(name: str, action: str = Form(...)):
         ok = server_creator.restart_server_tmux(name, ram_gb, software)
         return JSONResponse({"status": "online" if ok else "offline"})
     elif action == "kill":
-        from mcops.modules.server_creator import _get_tmux_server
-        tmux = _get_tmux_server()
-        if tmux:
-            try:
-                session = tmux.sessions.get(session_name=f"mc_{name}")
-                if session:
-                    session.kill_session()
-            except Exception:
-                pass
+        server_creator.kill_server_tmux(name)
         return JSONResponse({"status": "offline"})
 
     return JSONResponse({"error": "Unknown action"}, status_code=400)
@@ -417,15 +409,17 @@ async def api_create_server(req: CreateServerRequest):
 
 class ServerActionRequest(BaseModel):
     api_key: str
+    server_name: str
     action: str
 
-@app.post("/api/server/{name}/action")
-async def api_server_action(name: str, req: ServerActionRequest):
+@app.post("/api/server/action")
+async def api_server_action(req: ServerActionRequest):
     import os
     valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
     if req.api_key != valid_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
         
+    name = req.server_name
     registry = server_creator.load_registry()
     if name not in registry:
         raise HTTPException(status_code=404, detail="Server not found")
@@ -443,6 +437,9 @@ async def api_server_action(name: str, req: ServerActionRequest):
     elif req.action == "restart":
         ok = server_creator.restart_server_tmux(name, ram_gb, software)
         return {"status": "online" if ok else "offline"}
+    elif req.action == "kill":
+        server_creator.kill_server_tmux(name)
+        return {"status": "offline"}
     else:
         raise HTTPException(status_code=400, detail="Invalid action")
 
@@ -530,10 +527,26 @@ async def get_stats(api_key: str = ""):
     if api_key != valid_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
         
+    registry = server_creator.load_registry()
+    statuses = server_creator.get_all_statuses(registry)
+    
+    server_info = {}
+    for name, info in registry.items():
+        server_info[name] = {
+            "status": statuses.get(name, "offline"),
+            "software": info.get("software"),
+            "version": info.get("version"),
+            "port": info.get("port"),
+            "ram_gb": info.get("ram_gb"),
+            "plugins": info.get("plugins", []),
+            "players": stats_manager.get_players_per_server().get(name, 0)
+        }
+
     return {
         "current_players": stats_manager.get_current_player_count(),
         "online_players":  stats_manager.get_online_players(),
         "per_server":      stats_manager.get_players_per_server(),
+        "server_info":     server_info,
         "peak_today":      stats_manager.get_peak_today(),
         "timeseries":      stats_manager.get_timeseries(24),
         "recent_events":   stats_manager.get_recent_events(20),

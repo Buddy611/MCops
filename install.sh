@@ -211,44 +211,9 @@ pip install --quiet \
 ok "Python packages installed"
 
 # ════════════════════════════════════════════════════════════════════════
-step "6/7 – Compiling MCOps Plugin & Installing into Pool"
 # ════════════════════════════════════════════════════════════════════════
-PLUGIN_SRC="$SOURCE_DIR/mcops-plugin"
-PLUGIN_BUILD_DIR="/tmp/mcops-plugin-build"
-
-if [[ -d "$PLUGIN_SRC" ]]; then
-    cp -r "$PLUGIN_SRC" "$PLUGIN_BUILD_DIR"
-    cd "$PLUGIN_BUILD_DIR"
-
-    # Use system gradle or download wrapper
-    if command -v gradle &>/dev/null; then
-        info "Compiling plugins using system Gradle..."
-        gradle build --no-daemon --quiet 2>/dev/null
-    else
-        # Fallback: download gradle wrapper
-        info "Downloading Gradle wrapper..."
-        wget -q "https://services.gradle.org/distributions/gradle-8.5-bin.zip" -O /tmp/gradle.zip
-        unzip -q /tmp/gradle.zip -d /tmp/
-        GRADLE_BIN=$(ls -d /tmp/gradle-*/bin/gradle | head -1)
-        "$GRADLE_BIN" build --no-daemon --quiet 2>/dev/null
-    fi
-
-    if [[ -f "mcops-bukkit/build/libs/MCOpsPlugin-Paper.jar" ]]; then
-        cp "mcops-bukkit/build/libs/MCOpsPlugin-Paper.jar" "$BASE_DIR/plugin-pool/"
-        cp "mcops-velocity/build/libs/MCOpsPlugin-Velocity.jar" "$BASE_DIR/plugin-pool/"
-        cp "mcops-fabric/build/libs/MCOpsPlugin-Fabric.jar" "$BASE_DIR/plugin-pool/"
-        ok "MCOpsPlugin JARs (Paper, Velocity, Fabric) → $BASE_DIR/plugin-pool/"
-    else
-        warn "Plugin build failed. Compile manually: cd $PLUGIN_BUILD_DIR && gradle build"
-        # Create a marker so the UI knows
-        echo "BUILD_FAILED" > "$BASE_DIR/plugin-pool/.mcops-plugin-build-failed"
-    fi
-
-    cd "$SOURCE_DIR"
-else
-    warn "mcops-plugin directory not found – plugin build skipped."
-fi
-
+step "6/7 – Preparing Plugin Pool"
+# ════════════════════════════════════════════════════════════════════════
 info "Downloading LuckPerms (Open source base for network sync)..."
 wget -q "https://download.luckperms.net/1575/bukkit/loader/LuckPerms-Bukkit-5.4.150.jar" -O "$BASE_DIR/plugin-pool/LuckPerms-Bukkit.jar" || true
 wget -q "https://download.luckperms.net/1575/velocity/LuckPerms-Velocity-5.4.150.jar" -O "$BASE_DIR/plugin-pool/LuckPerms-Velocity.jar" || true

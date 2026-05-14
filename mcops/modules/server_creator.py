@@ -145,42 +145,6 @@ def create_server(
     for plugin in plugins:
         copy_plugin_to_instance(plugin, server_name, is_mod=is_mod)
         
-    # 6.5 Auto-inject MCOpsPlugin and generate config
-    mcops_plugin_name = ""
-    if software.lower() == "paper":
-        mcops_plugin_name = "MCOpsPlugin-Paper"
-    elif software.lower() == "velocity":
-        mcops_plugin_name = "MCOpsPlugin-Velocity"
-    elif software.lower() == "fabric":
-        mcops_plugin_name = "MCOpsPlugin-Fabric"
-        
-    if mcops_plugin_name:
-        copy_plugin_to_instance(mcops_plugin_name, server_name, is_mod=is_mod)
-        
-    import os
-    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
-    port_panel = os.environ.get("MCOPS_PORT", "8000")
-    panel_url = f"http://127.0.0.1:{port_panel}"
-    
-    if is_mod:
-        config_dir = instance_dir / "config"
-        config_dir.mkdir(parents=True, exist_ok=True)
-        (config_dir / "mcops.json").write_text(json.dumps({
-            "panel-url": panel_url,
-            "api-key": valid_key,
-            "server-name": server_name,
-            "enabled": True
-        }, indent=2))
-    else:
-        config_dir = instance_dir / "plugins" / "MCOpsPlugin"
-        config_dir.mkdir(parents=True, exist_ok=True)
-        (config_dir / "config.yml").write_text(
-            f"panel-url: '{panel_url}'\n"
-            f"api-key: '{valid_key}'\n"
-            f"server-name: '{server_name}'\n"
-            f"enabled: true\n"
-        )
-
     # 7. DB Injection
     inject_database_credentials(server_name)
     
@@ -270,6 +234,21 @@ def stop_server_tmux(server_name: str, software: str = "paper") -> bool:
     except Exception as e:
         log.error(f"stop_server_tmux error: {e}")
         return False
+
+
+def kill_server_tmux(server_name: str) -> bool:
+    tmux = _get_tmux_server()
+    if not tmux:
+        return False
+    session = _find_session(tmux, f"mc_{server_name}")
+    if session:
+        try:
+            session.kill_session()
+            return True
+        except Exception as e:
+            log.error(f"kill_server_tmux error: {e}")
+            return False
+    return False
 
 
 def restart_server_tmux(server_name: str, ram_gb: int, software: str = "paper") -> bool:
