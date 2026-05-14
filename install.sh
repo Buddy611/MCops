@@ -26,7 +26,7 @@ EOF
 echo -e "${NC}${BOLD}  Minecraft Server Management Panel – Auto-Installer v2.0${NC}\n"
 
 # ── Root check ──────────────────────────────────────────────────────────
-[[ "$EUID" -ne 0 ]] && err "Bitte als root ausführen: sudo bash install.sh"
+[[ "$EUID" -ne 0 ]] && err "Please run as root: sudo bash install.sh"
 
 # ── Config ──────────────────────────────────────────────────────────────
 MCOPS_USER="${MCOPS_USER:-mcops}"
@@ -40,12 +40,12 @@ SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PANEL_DIR="$BASE_DIR/panel"
 VENV_DIR="$BASE_DIR/venv"
 
-echo -e "  ${CYAN}Verzeichnis:${NC}  $BASE_DIR"
+echo -e "  ${CYAN}Directory:${NC}    $BASE_DIR"
 echo -e "  ${CYAN}Port:${NC}         $PORT"
 echo -e "  ${CYAN}System-User:${NC}  $MCOPS_USER"
 
 # ════════════════════════════════════════════════════════════════════════
-step "1/7 – System-Pakete installieren"
+step "1/7 – Installing System Packages"
 # ════════════════════════════════════════════════════════════════════════
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq 2>/dev/null
@@ -61,11 +61,11 @@ apt-get install -y -qq \
 
 # Fallback: try openjdk-17 if 21 not available
 java -version &>/dev/null || apt-get install -y -qq openjdk-17-jdk 2>/dev/null || true
-java -version &>/dev/null || err "Java konnte nicht installiert werden"
-ok "System-Pakete installiert (Java, tmux, MariaDB, Gradle)"
+java -version &>/dev/null || err "Java could not be installed"
+ok "System packages installed (Java, tmux, MariaDB, Gradle)"
 
 # ════════════════════════════════════════════════════════════════════════
-step "2/7 – MariaDB einrichten"
+step "2/7 – Setting up MariaDB"
 # ════════════════════════════════════════════════════════════════════════
 systemctl start mariadb
 systemctl enable mariadb
@@ -78,16 +78,16 @@ GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
 SQLEOF
 
-ok "MariaDB Datenbank '${DB_NAME}' und Benutzer '${DB_USER}' erstellt"
+ok "MariaDB database '${DB_NAME}' and user '${DB_USER}' created"
 
 # ════════════════════════════════════════════════════════════════════════
-step "3/7 – Benutzer & Verzeichnisse"
+step "3/7 – User & Directories"
 # ════════════════════════════════════════════════════════════════════════
 if ! id "$MCOPS_USER" &>/dev/null; then
     useradd -r -s /bin/bash -m -d "$BASE_DIR" "$MCOPS_USER"
-    ok "System-User '$MCOPS_USER' erstellt"
+    ok "System user '$MCOPS_USER' created"
 else
-    ok "User '$MCOPS_USER' existiert bereits"
+    ok "User '$MCOPS_USER' already exists"
 fi
 
 mkdir -p \
@@ -99,13 +99,13 @@ mkdir -p \
     "$BASE_DIR/global/plugin-templates" \
     "$BASE_DIR/logs"
 
-ok "Verzeichnisstruktur angelegt unter $BASE_DIR"
+ok "Directory structure created under $BASE_DIR"
 
 # ════════════════════════════════════════════════════════════════════════
-step "4/7 – Panel-Code installieren"
+step "4/7 – Installing Panel Code"
 # ════════════════════════════════════════════════════════════════════════
 cp -r "$SOURCE_DIR/mcops" "$PANEL_DIR/"
-ok "mcops Paket kopiert"
+ok "mcops package copied"
 
 # Touch __init__ files
 touch "$PANEL_DIR/mcops/__init__.py"
@@ -144,7 +144,6 @@ DB_PASSWORD=${DB_PASS}
 DB_NAME=${DB_NAME}
 ENVEOF
 
-# Default JSON files
 # Default JSON files
 [[ -f "$BASE_DIR/global/server_registry.json" ]] || echo '{}' > "$BASE_DIR/global/server_registry.json"
 
@@ -191,7 +190,7 @@ if __name__ == "__main__":
     )
 PYEOF
 
-ok "Panel-Code & Konfiguration fertig"
+ok "Panel code & configuration ready"
 
 # ════════════════════════════════════════════════════════════════════════
 step "5/7 – Python Virtual Environment & Dependencies"
@@ -209,10 +208,10 @@ pip install --quiet \
     websockets \
     aiofiles
 
-ok "Python-Pakete installiert"
+ok "Python packages installed"
 
 # ════════════════════════════════════════════════════════════════════════
-step "6/7 – MCOps Plugin kompilieren & in Pool installieren"
+step "6/7 – Compiling MCOps Plugin & Installing into Pool"
 # ════════════════════════════════════════════════════════════════════════
 PLUGIN_SRC="$SOURCE_DIR/mcops-plugin"
 PLUGIN_BUILD_DIR="/tmp/mcops-plugin-build"
@@ -223,11 +222,11 @@ if [[ -d "$PLUGIN_SRC" ]]; then
 
     # Use system gradle or download wrapper
     if command -v gradle &>/dev/null; then
-        info "Kompiliere Plugins mit System-Gradle..."
+        info "Compiling plugins using system Gradle..."
         gradle build --no-daemon --quiet 2>/dev/null
     else
         # Fallback: download gradle wrapper
-        info "Lade Gradle Wrapper herunter..."
+        info "Downloading Gradle wrapper..."
         wget -q "https://services.gradle.org/distributions/gradle-8.5-bin.zip" -O /tmp/gradle.zip
         unzip -q /tmp/gradle.zip -d /tmp/
         GRADLE_BIN=$(ls -d /tmp/gradle-*/bin/gradle | head -1)
@@ -240,23 +239,23 @@ if [[ -d "$PLUGIN_SRC" ]]; then
         cp "mcops-fabric/build/libs/MCOpsPlugin-Fabric.jar" "$BASE_DIR/plugin-pool/"
         ok "MCOpsPlugin JARs (Paper, Velocity, Fabric) → $BASE_DIR/plugin-pool/"
     else
-        warn "Plugin-Build fehlgeschlagen. Manuell kompilieren: cd $PLUGIN_BUILD_DIR && gradle build"
+        warn "Plugin build failed. Compile manually: cd $PLUGIN_BUILD_DIR && gradle build"
         # Create a marker so the UI knows
         echo "BUILD_FAILED" > "$BASE_DIR/plugin-pool/.mcops-plugin-build-failed"
     fi
 
     cd "$SOURCE_DIR"
 else
-    warn "mcops-plugin Verzeichnis nicht gefunden – Plugin-Build übersprungen."
+    warn "mcops-plugin directory not found – plugin build skipped."
 fi
 
-info "Lade LuckPerms (Open Source Basis für Netzwerksynchronisation) herunter..."
+info "Downloading LuckPerms (Open source base for network sync)..."
 wget -q "https://download.luckperms.net/1575/bukkit/loader/LuckPerms-Bukkit-5.4.150.jar" -O "$BASE_DIR/plugin-pool/LuckPerms-Bukkit.jar" || true
 wget -q "https://download.luckperms.net/1575/velocity/LuckPerms-Velocity-5.4.150.jar" -O "$BASE_DIR/plugin-pool/LuckPerms-Velocity.jar" || true
-ok "LuckPerms heruntergeladen"
+ok "LuckPerms downloaded"
 
 # ════════════════════════════════════════════════════════════════════════
-step "7/7 – Systemd Service einrichten & starten"
+step "7/7 – Setting up & starting Systemd Service"
 # ════════════════════════════════════════════════════════════════════════
 chown -R "$MCOPS_USER:$MCOPS_USER" "$BASE_DIR"
 
@@ -291,30 +290,30 @@ sleep 3
 SERVER_IP=$(hostname -I | awk '{print $1}')
 
 if systemctl is-active --quiet mcops; then
-    STATUS="${GREEN}LÄUFT${NC}"
+    STATUS="${GREEN}RUNNING${NC}"
 else
-    STATUS="${RED}FEHLER${NC} – prüfe: journalctl -u mcops -n 30"
+    STATUS="${RED}ERROR${NC} – check: journalctl -u mcops -n 30"
 fi
 
 # ════════════════════════════════════════════════════════════════════════
 echo ""
 echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}${BOLD}║       MCOps Panel erfolgreich installiert!               ║${NC}"
+echo -e "${GREEN}${BOLD}║       MCOps Panel installed successfully!                ║${NC}"
 echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  ${BOLD}Panel:${NC}        ${CYAN}http://${SERVER_IP}:${PORT}${NC}"
 echo -e "  ${BOLD}Status:${NC}       $(echo -e $STATUS)"
 echo -e "  ${BOLD}API Key:${NC}      ${YELLOW}${API_KEY}${NC}"
 echo ""
-echo -e "  ${BOLD}Datenbank:${NC}"
+echo -e "  ${BOLD}Database:${NC}"
 echo -e "    Host:     127.0.0.1:3306"
 echo -e "    DB:       ${DB_NAME}"
 echo -e "    User:     ${DB_USER}"
-echo -e "    Passwort: ${YELLOW}${DB_PASS}${NC}"
+echo -e "    Password: ${YELLOW}${DB_PASS}${NC}"
 echo ""
 echo -e "  ${BOLD}Plugin Pool:${NC}  $BASE_DIR/plugin-pool/"
-echo -e "  ${BOLD}Server-Daten:${NC} $BASE_DIR/instances/"
+echo -e "  ${BOLD}Server Data:${NC} $BASE_DIR/instances/"
 echo -e "  ${BOLD}Logs:${NC}         journalctl -u mcops -f"
 echo ""
-echo -e "  ${YELLOW}⚠  Speichere API Key und DB-Passwort sicher!${NC}"
+echo -e "  ${YELLOW}⚠  Save API Key and DB Password securely!${NC}"
 echo ""

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Server erstellen – MCOps{% endblock %}
+{% block title %}Create Server – MCOps{% endblock %}
 
 {% block head %}
 <style>
@@ -39,10 +39,10 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <div class="page-title">Neuen Server erstellen</div>
-        <div class="page-subtitle">Vollautomatisch – JAR-Download, EULA, Proxy-Registrierung</div>
+        <div class="page-title">Create New Server</div>
+        <div class="page-subtitle">Fully automated – JAR download, EULA, proxy registration</div>
     </div>
-    <a href="/" class="btn btn-ghost">← Zurück</a>
+    <a href="/" class="btn btn-ghost">← Back</a>
 </div>
 
 <div id="form-result"></div>
@@ -59,20 +59,20 @@
             <div class="card-body">
                 <div class="section-title">
                     <span class="step-badge">1</span>
-                    Software wählen
+                    Choose Software
                 </div>
                 <div class="software-cards">
                     <label class="software-card selected" onclick="selectSoftware(this,'paper')">
                         <input type="radio" name="software" value="paper" checked>
                         <div style="font-size:1.5rem">🟠</div>
                         <div class="sw-name">Paper</div>
-                        <div class="sw-desc">Spigot-kompatibel, Plugins</div>
+                        <div class="sw-desc">Spigot compatible, plugins</div>
                     </label>
                     <label class="software-card" onclick="selectSoftware(this,'velocity')">
                         <input type="radio" name="software" value="velocity">
                         <div style="font-size:1.5rem">🟣</div>
                         <div class="sw-name">Velocity</div>
-                        <div class="sw-desc">Proxy / BungeeCord-Ersatz</div>
+                        <div class="sw-desc">Proxy / BungeeCord replacement</div>
                     </label>
                     <label class="software-card" onclick="selectSoftware(this,'fabric')">
                         <input type="radio" name="software" value="fabric">
@@ -89,21 +89,21 @@
             <div class="card-body">
                 <div class="section-title">
                     <span class="step-badge">2</span>
-                    Server konfigurieren
+                    Configure Server
                 </div>
 
                 <div class="grid-2">
                     <div class="form-group">
-                        <label class="form-label">Server-Name <span class="form-required">*</span></label>
+                        <label class="form-label">Server Name <span class="form-required">*</span></label>
                         <input type="text" name="server_name" class="form-control"
-                            placeholder="z.B. survival-1" required pattern="[A-Za-z0-9\-_]+"
+                            placeholder="e.g. survival-1" required pattern="[A-Za-z0-9\-_]+"
                             oninput="updateSummary()">
-                        <span class="form-hint">Nur Buchstaben, Zahlen, Bindestriche</span>
+                        <span class="form-hint">Letters, numbers, hyphens only</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Version <span class="form-required">*</span></label>
                         <select name="version" id="version-select" class="form-control" onchange="updateSummary()">
-                            <option value="">Wird geladen…</option>
+                            <option value="">Loading…</option>
                         </select>
                     </div>
                 </div>
@@ -117,8 +117,8 @@
                     <div class="form-group">
                         <label class="form-label">Port</label>
                         <input type="text" name="port" class="form-control"
-                            value="auto" placeholder="auto oder z.B. 25565" oninput="updateSummary()">
-                        <span class="form-hint">auto = nächster freier Port ab 25570</span>
+                            value="auto" placeholder="auto or e.g. 25565" oninput="updateSummary()">
+                        <span class="form-hint">auto = next free port from 25570</span>
                     </div>
                 </div>
             </div>
@@ -142,8 +142,8 @@
                 </div>
                 {% else %}
                 <div class="alert alert-info">
-                    Keine Plugins im Pool gefunden.
-                    <a href="/plugins">Plugin Pool öffnen →</a>
+                    No plugins found in pool.
+                    <a href="/plugins">Open Plugin Pool →</a>
                 </div>
                 {% endif %}
             </div>
@@ -152,14 +152,14 @@
         <button type="submit" class="btn btn-primary btn-lg" style="align-self:flex-start"
             id="submit-btn">
             <span class="htmx-indicator spinner"></span>
-            🚀 Server erstellen &amp; starten
+            🚀 Create & Start Server
         </button>
     </div>
 
     <!-- RIGHT: Summary -->
     <div>
         <div class="card" style="position:sticky;top:1rem;">
-            <div class="card-header"><span class="card-title">📋 Zusammenfassung</span></div>
+            <div class="card-header"><span class="card-title">📋 Summary</span></div>
             <div class="card-body" id="summary-box">
                 <div class="summary-row"><span class="text-muted">Name</span><span id="s-name" class="fw-600 mono">–</span></div>
                 <div class="summary-row"><span class="text-muted">Software</span><span id="s-sw" class="fw-600">Paper</span></div>
@@ -169,10 +169,10 @@
             </div>
             <div class="card-body" style="border-top:1px solid var(--border);padding-top:0.75rem;">
                 <p class="text-muted text-sm">
-                    ✅ EULA wird automatisch akzeptiert<br>
-                    ✅ online-mode=false (für Velocity)<br>
-                    ✅ Proxy-Registrierung automatisch<br>
-                    ✅ DB-Injection bei konfigurierten Plugins
+                    ✅ EULA is automatically accepted<br>
+                    ✅ online-mode=false (for Velocity)<br>
+                    ✅ Proxy registration automated<br>
+                    ✅ DB injection for configured plugins
                 </p>
             </div>
         </div>
@@ -196,7 +196,7 @@ function selectSoftware(label, sw) {
 
 async function loadVersions(sw) {
     const sel = document.getElementById('version-select');
-    sel.innerHTML = '<option>Lädt…</option>';
+    sel.innerHTML = '<option>Loading…</option>';
     try {
         const res = await fetch(`/api/versions/${sw}`);
         const versions = await res.json();
@@ -205,7 +205,7 @@ async function loadVersions(sw) {
         ).join('');
         updateSummary();
     } catch(e) {
-        sel.innerHTML = '<option value="">Fehler beim Laden</option>';
+        sel.innerHTML = '<option value="">Error loading</option>';
     }
 }
 

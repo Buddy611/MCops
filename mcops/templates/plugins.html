@@ -5,10 +5,10 @@
 <div class="page-header">
     <div>
         <div class="page-title">🔌 Plugin Pool</div>
-        <div class="page-subtitle">Globale Plugins – werden beim Server-Erstellen zugewiesen</div>
+        <div class="page-subtitle">Global plugins – assigned during server creation</div>
     </div>
     <label class="btn btn-primary" style="cursor:pointer">
-        📤 Plugin hochladen
+        📤 Upload Plugin
         <input type="file" id="upload-input" accept=".jar" style="display:none" onchange="uploadPlugin(this)">
     </label>
 </div>
@@ -17,17 +17,17 @@
 
 <div class="card">
     <div class="card-header">
-        <span class="card-title">Installierte Plugins</span>
-        <span class="text-muted text-sm">{{ plugins|length }} Plugins</span>
+        <span class="card-title">Installed Plugins</span>
+        <span class="text-muted text-sm">{{ plugins|length }} plugins</span>
     </div>
 
     {% if plugins %}
     <table class="server-table">
         <thead>
             <tr>
-                <th>Dateiname</th>
-                <th>Größe</th>
-                <th>Aktionen</th>
+                <th>Filename</th>
+                <th>Size</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -45,7 +45,7 @@
                     {% endif %}
                 </td>
                 <td>
-                    <button class="btn btn-danger btn-sm" onclick="deletePlugin('{{ plugin.filename }}', this)">🗑 Löschen</button>
+                    <button class="btn btn-danger btn-sm" onclick="deletePlugin('{{ plugin.filename }}', this)">🗑 Delete</button>
                 </td>
             </tr>
             {% endfor %}
@@ -54,8 +54,8 @@
     {% else %}
     <div style="text-align:center;padding:3rem;color:var(--text-muted)">
         <div style="font-size:2.5rem;margin-bottom:0.75rem">🔌</div>
-        <p style="font-size:1rem;font-weight:500;color:var(--text)">Keine Plugins im Pool</p>
-        <p>Lade .jar Dateien hoch, um sie beim Erstellen neuer Server verfügbar zu machen.</p>
+        <p style="font-size:1rem;font-weight:500;color:var(--text)">No plugins in pool</p>
+        <p>Upload .jar files to make them available when creating new servers.</p>
     </div>
     {% endif %}
 </div>
@@ -67,21 +67,21 @@ async function uploadPlugin(input) {
     const file = input.files[0];
     if (!file) return;
     const resultEl = document.getElementById('upload-result');
-    resultEl.innerHTML = '<div class="alert alert-info">⏳ Wird hochgeladen...</div>';
+    resultEl.innerHTML = '<div class="alert alert-info">⏳ Uploading...</div>';
     const fd = new FormData();
     fd.append('file', file);
     const res = await fetch('/plugins/upload', { method: 'POST', body: fd });
     if (res.ok) {
-        resultEl.innerHTML = '<div class="alert alert-success">✅ Plugin hochgeladen!</div>';
+        resultEl.innerHTML = '<div class="alert alert-success">✅ Plugin uploaded!</div>';
         setTimeout(() => location.reload(), 800);
     } else {
         const d = await res.json();
-        resultEl.innerHTML = `<div class="alert alert-danger">❌ ${d.detail || 'Fehler'}</div>`;
+        resultEl.innerHTML = `<div class="alert alert-danger">❌ ${d.detail || 'Error'}</div>`;
     }
 }
 
 async function deletePlugin(filename, btn) {
-    if (!confirm(`Plugin '${filename}' wirklich löschen?`)) return;
+    if (!confirm(`Really delete plugin '${filename}'?`)) return;
     btn.disabled = true;
     await fetch(`/plugins/${encodeURIComponent(filename)}`, { method: 'DELETE' });
     location.reload();

@@ -5,46 +5,46 @@
 <div class="page-header">
     <div>
         <div class="page-title">Server Dashboard</div>
-        <div class="page-subtitle">Alle verwalteten Minecraft-Instanzen</div>
+        <div class="page-subtitle">All managed Minecraft instances</div>
     </div>
     <a href="/create" class="btn btn-primary btn-lg">
-        <span>➕</span> Server erstellen
+        <span>➕</span> Create Server
     </a>
 </div>
 
 <!-- STAT CARDS -->
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-label">Gesamt Server</div>
+        <div class="stat-label">Total Servers</div>
         <div class="stat-value">{{ servers|length }}</div>
-        <div class="stat-sub">Instanzen</div>
+        <div class="stat-sub">Instances</div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Online</div>
         <div class="stat-value" style="color:var(--green)">
             {{ servers.values()|selectattr('status','equalto','online')|list|length }}
         </div>
-        <div class="stat-sub">Aktiv</div>
+        <div class="stat-sub">Active</div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Offline</div>
         <div class="stat-value" style="color:var(--red)">
             {{ servers.values()|selectattr('status','equalto','offline')|list|length }}
         </div>
-        <div class="stat-sub">Gestoppt</div>
+        <div class="stat-sub">Stopped</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Spieler</div>
+        <div class="stat-label">Players</div>
         <div class="stat-value" id="player-count">–</div>
-        <div class="stat-sub">Online jetzt</div>
+        <div class="stat-sub">Online now</div>
     </div>
 </div>
 
 <!-- SERVER TABLE -->
 <div class="card">
     <div class="card-header">
-        <span class="card-title">🖥 Instanzen</span>
-        <span class="text-muted text-sm">{{ servers|length }} Server</span>
+        <span class="card-title">🖥 Instances</span>
+        <span class="text-muted text-sm">{{ servers|length }} servers</span>
     </div>
 
     {% if servers %}
@@ -57,7 +57,7 @@
                 <th>Port</th>
                 <th>RAM</th>
                 <th>Status</th>
-                <th>Aktionen</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -87,7 +87,7 @@
                 </td>
                 <td>
                     <div class="flex gap-1">
-                        <a href="/server/{{ name }}" class="btn btn-ghost btn-sm">Verwalten</a>
+                        <a href="/server/{{ name }}" class="btn btn-ghost btn-sm">Manage</a>
                         {% if info.status == 'online' %}
                         <button class="btn btn-danger btn-sm"
                             onclick="serverAction('{{ name }}','stop',this)">Stop</button>
@@ -104,9 +104,9 @@
     {% else %}
     <div style="text-align:center;padding:4rem 2rem;color:var(--text-muted)">
         <div style="font-size:3rem;margin-bottom:1rem">🗄</div>
-        <p style="font-size:1rem;font-weight:500;color:var(--text)">Keine Server gefunden</p>
-        <p style="margin-bottom:1.5rem">Erstelle deinen ersten Minecraft-Server.</p>
-        <a href="/create" class="btn btn-primary">Server erstellen</a>
+        <p style="font-size:1rem;font-weight:500;color:var(--text)">No servers found</p>
+        <p style="margin-bottom:1.5rem">Create your first Minecraft server.</p>
+        <a href="/create" class="btn btn-primary">Create Server</a>
     </div>
     {% endif %}
 </div>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dateien – {{ name }} – MCOps{% endblock %}
+{% block title %}Files – {{ name }} – MCOps{% endblock %}
 
 {% block head %}
 <style>
@@ -26,10 +26,10 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <div class="page-title">📁 Datei-Manager</div>
+        <div class="page-title">📁 File Manager</div>
         <div class="page-subtitle">{{ name }}</div>
     </div>
-    <a href="/server/{{ name }}" class="btn btn-ghost">← Konsole</a>
+    <a href="/server/{{ name }}" class="btn btn-ghost">← Console</a>
 </div>
 
 <!-- Breadcrumb -->
@@ -44,10 +44,10 @@
 <!-- Upload bar -->
 <div class="card" style="margin-bottom:1rem">
     <div class="card-body" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;padding:0.75rem 1rem;">
-        <span class="text-muted text-sm">Datei hochladen:</span>
+        <span class="text-muted text-sm">Upload file:</span>
         <input type="file" id="upload-input" style="display:none" onchange="uploadFile(this)">
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('upload-input').click()">
-            📤 Datei wählen
+            📤 Choose file
         </button>
         <span id="upload-status" class="text-muted text-sm"></span>
     </div>
@@ -57,15 +57,15 @@
 <div class="card">
     <div class="card-header">
         <span class="card-title">{{ current_path or '/' }}</span>
-        <span class="text-muted text-sm">{{ items|length }} Einträge</span>
+        <span class="text-muted text-sm">{{ items|length }} entries</span>
     </div>
     <table class="file-table">
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Größe</th>
-                <th>Geändert</th>
-                <th>Aktionen</th>
+                <th>Size</th>
+                <th>Modified</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -95,7 +95,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">Ordner ist leer</td></tr>
+            <tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">Folder is empty</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -112,8 +112,8 @@
             <textarea class="editor-textarea" id="editor-content" spellcheck="false"></textarea>
         </div>
         <div class="editor-footer">
-            <button class="btn btn-ghost" onclick="closeEditor()">Abbrechen</button>
-            <button class="btn btn-primary" onclick="saveFile()">💾 Speichern</button>
+            <button class="btn btn-ghost" onclick="closeEditor()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveFile()">💾 Save</button>
         </div>
     </div>
 </div>
@@ -126,19 +126,19 @@ let currentEditPath = "";
 
 async function openEditor(path, name) {
     if (!name.match(/\.(yml|yaml|toml|json|properties|txt|log|conf|cfg|sh|xml)$/i)) {
-        alert('Diese Datei kann nicht im Browser bearbeitet werden.');
+        alert('This file cannot be edited in the browser.');
         return;
     }
     currentEditPath = path;
     document.getElementById('editor-filename').textContent = name;
-    document.getElementById('editor-content').value = 'Lädt...';
+    document.getElementById('editor-content').value = 'Loading...';
     document.getElementById('editor-overlay').classList.add('open');
     try {
         const res = await fetch(`/server/${serverName}/files/read?path=${encodeURIComponent(path)}`);
         const data = await res.json();
         document.getElementById('editor-content').value = data.content;
     } catch(e) {
-        document.getElementById('editor-content').value = 'Fehler beim Laden.';
+        document.getElementById('editor-content').value = 'Error loading.';
     }
 }
 
@@ -155,12 +155,12 @@ async function saveFile() {
     if (res.ok) {
         closeEditor();
     } else {
-        alert('Speichern fehlgeschlagen.');
+        alert('Save failed.');
     }
 }
 
 async function deletePath(path, name) {
-    if (!confirm(`'${name}' wirklich löschen?`)) return;
+    if (!confirm(`Really delete '${name}'?`)) return;
     await fetch(`/server/${serverName}/files/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
     location.reload();
 }
@@ -169,17 +169,17 @@ async function uploadFile(input) {
     const file = input.files[0];
     if (!file) return;
     const status = document.getElementById('upload-status');
-    status.textContent = 'Lädt hoch...';
+    status.textContent = 'Uploading...';
     const fd = new FormData();
     fd.append('path', "{{ current_path }}");
     fd.append('file', file);
     const res = await fetch(`/server/${serverName}/files/upload`, { method: 'POST', body: fd });
     if (res.ok) {
-        status.textContent = '✅ Hochgeladen!';
+        status.textContent = '✅ Uploaded!';
         setTimeout(() => location.reload(), 800);
     } else {
         const d = await res.json();
-        status.textContent = '❌ ' + (d.detail || 'Fehler');
+        status.textContent = '❌ ' + (d.detail || 'Error');
     }
 }
 </script>

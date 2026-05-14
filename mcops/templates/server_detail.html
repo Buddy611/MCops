@@ -52,9 +52,9 @@
 
 <!-- TABS -->
 <div class="tabs">
-    <a href="#" class="tab active" onclick="showTab('console',this)">🖥 Konsole</a>
-    <a href="/server/{{ name }}/files" class="tab">📁 Dateien</a>
-    <a href="/server/{{ name }}/settings" class="tab">⚙ Einstellungen</a>
+    <a href="#" class="tab active" onclick="showTab('console',this)">🖥 Console</a>
+    <a href="/server/{{ name }}/files" class="tab">📁 Files</a>
+    <a href="/server/{{ name }}/settings" class="tab">⚙ Settings</a>
 </div>
 
 <div id="tab-console">
@@ -77,9 +77,9 @@
             <div class="card-header"><span class="card-title">Power</span></div>
             <div class="card-body">
                 <div class="action-row">
-                    <button class="btn btn-success" onclick="doAction('start')">▶ Starten</button>
-                    <button class="btn btn-warning" onclick="doAction('restart')">🔄 Neustarten</button>
-                    <button class="btn btn-danger" onclick="doAction('stop')">⏹ Stoppen</button>
+                    <button class="btn btn-success" onclick="doAction('start')">▶ Start</button>
+                    <button class="btn btn-warning" onclick="doAction('restart')">🔄 Restart</button>
+                    <button class="btn btn-danger" onclick="doAction('stop')">⏹ Stop</button>
                     <button class="btn btn-ghost btn-sm" onclick="doAction('kill')" style="margin-top:0.25rem">☠ Kill</button>
                 </div>
             </div>
@@ -90,10 +90,10 @@
             <div class="card-header"><span class="card-title" style="color:var(--red)">⚠ Danger Zone</span></div>
             <div class="card-body">
                 <button class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:0.5rem" onclick="doBackup()">
-                    💾 Backup erstellen
+                    💾 Create Backup
                 </button>
                 <button class="btn btn-danger btn-sm" style="width:100%" onclick="confirmDelete()">
-                    🗑 Server löschen
+                    🗑 Delete Server
                 </button>
             </div>
         </div>
@@ -102,16 +102,16 @@
     <!-- Terminal -->
     <div class="card">
         <div class="card-header">
-            <span class="card-title">Live Konsole</span>
-            <div id="ws-status" class="badge badge-offline"><span class="dot"></span>Getrennt</div>
+            <span class="card-title">Live Console</span>
+            <div id="ws-status" class="badge badge-offline"><span class="dot"></span>Disconnected</div>
         </div>
         <div class="card-body" style="padding:0.75rem">
             <div class="terminal">
-                <div class="terminal-output" id="terminal-output">Verbinde...</div>
+                <div class="terminal-output" id="terminal-output">Connecting...</div>
                 <div class="terminal-input-row">
                     <span class="terminal-prompt">$</span>
-                    <input class="terminal-input" id="terminal-input" placeholder="Befehl eingeben…" autocomplete="off">
-                    <button class="btn btn-primary btn-sm" onclick="sendCmd()">Senden</button>
+                    <input class="terminal-input" id="terminal-input" placeholder="Enter command…" autocomplete="off">
+                    <button class="btn btn-primary btn-sm" onclick="sendCmd()">Send</button>
                 </div>
             </div>
         </div>
@@ -136,8 +136,8 @@ function connectWS() {
 
     ws.onopen = () => {
         wsStatus.className = 'badge badge-online';
-        wsStatus.innerHTML = '<span class="dot"></span>Verbunden';
-        appendLine('[MCOps] Verbunden mit Server-Konsole');
+        wsStatus.innerHTML = '<span class="dot"></span>Connected';
+        appendLine('[MCOps] Connected to server console');
     };
 
     ws.onmessage = (e) => {
@@ -146,13 +146,13 @@ function connectWS() {
 
     ws.onclose = () => {
         wsStatus.className = 'badge badge-offline';
-        wsStatus.innerHTML = '<span class="dot"></span>Getrennt';
-        appendLine('[MCOps] Verbindung getrennt. Versuche neu...');
+        wsStatus.innerHTML = '<span class="dot"></span>Disconnected';
+        appendLine('[MCOps] Connection lost. Retrying...');
         setTimeout(connectWS, 4000);
     };
 
     ws.onerror = () => {
-        appendLine('[MCOps] WebSocket Fehler.');
+        appendLine('[MCOps] WebSocket Error.');
     };
 }
 
@@ -190,7 +190,7 @@ function updateBadge(status) {
     if (status === 'online') {
         el.innerHTML = '<span class="badge badge-online"><span class="dot"></span>Online</span>';
     } else if (status === 'stopping') {
-        el.innerHTML = '<span class="badge" style="background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,158,11,0.3)"><span class="dot" style="background:var(--yellow)"></span>Stoppt...</span>';
+        el.innerHTML = '<span class="badge" style="background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,158,11,0.3)"><span class="dot" style="background:var(--yellow)"></span>Stopping...</span>';
         setTimeout(() => {
             el.innerHTML = '<span class="badge badge-offline"><span class="dot"></span>Offline</span>';
         }, 4000);
@@ -201,7 +201,7 @@ function updateBadge(status) {
 
 function showResult(action, status) {
     const el = document.getElementById('action-result');
-    el.innerHTML = `<div class="alert alert-info">Aktion '${action}' ausgeführt – Status: ${status}</div>`;
+    el.innerHTML = `<div class="alert alert-info">Action '${action}' executed – Status: ${status}</div>`;
     setTimeout(() => el.innerHTML = '', 3000);
 }
 
@@ -209,12 +209,12 @@ async function doBackup() {
     const res = await fetch(`/server/${serverName}/backup`, { method: 'POST' });
     const data = await res.json();
     const el = document.getElementById('action-result');
-    el.innerHTML = `<div class="alert alert-success">💾 Backup erstellt: ${data.backup_path || 'OK'}</div>`;
+    el.innerHTML = `<div class="alert alert-success">💾 Backup created: ${data.backup_path || 'OK'}</div>`;
     setTimeout(() => el.innerHTML = '', 5000);
 }
 
 async function confirmDelete() {
-    if (!confirm(`Server '${serverName}' wirklich löschen?\nAlle Dateien werden entfernt!`)) return;
+    if (!confirm(`Really delete server '${serverName}'?\nAll files will be removed!`)) return;
     await fetch(`/server/${serverName}`, { method: 'DELETE' });
     location.href = '/';
 }

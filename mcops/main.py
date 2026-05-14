@@ -98,12 +98,12 @@ async def create_server_submit(
             start_after_creation=True,
         )
         return HTMLResponse(
-            content='<div class="alert alert-success">✅ Server erfolgreich erstellt und gestartet! '
-                    '<a href="/">Zum Dashboard</a></div>'
+            content='<div class="alert alert-success">✅ Server successfully created and started! '
+                    '<a href="/">To Dashboard</a></div>'
         )
     except Exception as e:
         return HTMLResponse(
-            content=f'<div class="alert alert-danger">❌ Fehler: {e}</div>'
+            content=f'<div class="alert alert-danger">❌ Error: {e}</div>'
         )
 
 
@@ -374,7 +374,7 @@ async def save_server_settings(
         )
         (instance_dir / "server.properties").write_text(props, encoding="utf-8")
 
-    return JSONResponse({"status": "ok", "message": "Einstellungen gespeichert. Server neustarten um Änderungen zu übernehmen."})
+    return JSONResponse({"status": "ok", "message": "Settings saved. Restart server to apply changes."})
 
 
 
@@ -478,7 +478,7 @@ async def save_db_config(
         f"DB_NAME={db_name}\n"
     )
     DB_CONFIG_FILE.write_text(content, encoding="utf-8")
-    return JSONResponse({"status": "ok", "message": "Datenbankverbindung gespeichert."})
+    return JSONResponse({"status": "ok", "message": "Database connection saved."})
 
 
 @app.post("/database/test")
@@ -493,7 +493,7 @@ async def test_db_connection(
     try:
         sock = socket.create_connection((db_host, int(db_port)), timeout=3)
         sock.close()
-        return JSONResponse({"status": "ok", "message": f"Verbindung zu {db_host}:{db_port} erfolgreich."})
+        return JSONResponse({"status": "ok", "message": f"Connection to {db_host}:{db_port} successful."})
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=200)
 

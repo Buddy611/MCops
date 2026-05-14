@@ -39,9 +39,9 @@ def _get_velocity_instance_dir() -> Path | None:
 
 def register_server_in_velocity(server_name: str, host: str, port: int) -> bool:
     """
-    Trägt einen neuen Server in velocity.toml ein.
-    Gibt True zurück bei Erfolg, False bei Fehler.
-    Erstellt automatisch ein Backup der velocity.toml vor der Änderung.
+    Adds a new server to velocity.toml.
+    Returns True on success, False on error.
+    Automatically creates a backup of velocity.toml before the change.
     """
     velocity_dir = _get_velocity_instance_dir()
     if not velocity_dir:
@@ -100,8 +100,8 @@ def register_server_in_velocity(server_name: str, host: str, port: int) -> bool:
 
 def reload_velocity_proxy() -> bool:
     """
-    Sendet 'velocity reload' an die tmux-Session des Proxy-Servers.
-    Gibt True zurück wenn Reload erfolgreich, False bei Timeout.
+    Sends 'velocity reload' to the tmux session of the Proxy server.
+    Returns True if reload was successful, False on timeout.
     """
     velocity_dir = _get_velocity_instance_dir()
     if not velocity_dir:
@@ -137,7 +137,7 @@ def reload_velocity_proxy() -> bool:
 
 
 def remove_server_from_velocity(server_name: str) -> bool:
-    """Entfernt einen Server aus der velocity.toml und löst Reload aus."""
+    """Removes a server from velocity.toml and triggers a reload."""
     velocity_dir = _get_velocity_instance_dir()
     if not velocity_dir:
         return False
@@ -181,7 +181,7 @@ def remove_server_from_velocity(server_name: str) -> bool:
 
 
 def get_registered_servers() -> dict:
-    """Liest alle aktuell in velocity.toml eingetragenen Server aus."""
+    """Reads all currently registered servers from velocity.toml."""
     velocity_dir = _get_velocity_instance_dir()
     if not velocity_dir:
         return {}

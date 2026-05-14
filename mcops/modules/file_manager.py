@@ -5,8 +5,8 @@ from mcops.config import INSTANCES_DIR
 
 def safe_path(base_dir: str, requested_path: str) -> Path:
     """
-    Löst den Pfad auf und prüft ob er innerhalb von base_dir liegt.
-    Wirft ValueError wenn Path Traversal erkannt wird.
+    Resolves the path and checks if it is within base_dir.
+    Raises ValueError if path traversal is detected.
     """
     base = Path(base_dir).resolve()
     target = (base / requested_path.lstrip('/')).resolve()
@@ -16,7 +16,7 @@ def safe_path(base_dir: str, requested_path: str) -> Path:
     return target
 
 def list_directory(server_name: str, path: str) -> list[dict]:
-    """Gibt Ordnerinhalt zurück: Dateien mit Größe, Änderungsdatum, Typ"""
+    """Returns folder content: files with size, modified date, type"""
     instance_dir = INSTANCES_DIR / server_name
     if not instance_dir.exists():
         raise FileNotFoundError("Server directory not found")
@@ -37,7 +37,7 @@ def list_directory(server_name: str, path: str) -> list[dict]:
     return items
 
 def read_file(server_name: str, path: str) -> str:
-    """Liest Dateiinhalt als String, max. 2MB"""
+    """Reads file content as string, max 2MB"""
     instance_dir = INSTANCES_DIR / server_name
     target_file = safe_path(str(instance_dir), path)
     
@@ -51,7 +51,7 @@ def read_file(server_name: str, path: str) -> str:
         return f.read()
 
 def write_file(server_name: str, path: str, content: str) -> bool:
-    """Schreibt neuen Inhalt in Datei, erstellt Backup der alten Version"""
+    """Writes new content to file, creates backup of old version"""
     instance_dir = INSTANCES_DIR / server_name
     target_file = safe_path(str(instance_dir), path)
     
@@ -64,7 +64,7 @@ def write_file(server_name: str, path: str, content: str) -> bool:
     return True
 
 def upload_file(server_name: str, target_path: str, file_data: bytes, filename: str) -> bool:
-    """Speichert hochgeladene Datei nach Whitelist-Prüfung"""
+    """Saves uploaded file after whitelist check"""
     whitelist = ['.jar', '.yml', '.toml', '.json', '.properties', '.txt', '.log']
     if not any(filename.lower().endswith(ext) for ext in whitelist):
         raise ValueError(f"File type not allowed for {filename}")
@@ -81,7 +81,7 @@ def upload_file(server_name: str, target_path: str, file_data: bytes, filename: 
     return True
 
 def delete_path(server_name: str, path: str) -> bool:
-    """Löscht Datei oder Ordner nach Sicherheitsprüfung"""
+    """Deletes file or folder after safety check"""
     instance_dir = INSTANCES_DIR / server_name
     target = safe_path(str(instance_dir), path)
     
@@ -95,7 +95,7 @@ def delete_path(server_name: str, path: str) -> bool:
     return True
 
 def rename_path(server_name: str, old_path: str, new_name: str) -> bool:
-    """Benennt Datei oder Ordner um"""
+    """Renames file or folder"""
     if "/" in new_name or "\\" in new_name:
         raise ValueError("New name must not contain path separators")
         
