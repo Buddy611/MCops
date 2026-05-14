@@ -124,6 +124,7 @@ import sys
 from pathlib import Path
 
 BASE_DIR          = Path("$BASE_DIR")
+VERSION           = "2.0.0"
 INSTANCES_DIR     = BASE_DIR / "instances"
 PLUGIN_POOL_DIR   = BASE_DIR / "plugin-pool"
 TEMPLATES_DIR     = BASE_DIR / "templates"

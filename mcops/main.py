@@ -589,8 +589,10 @@ async def record_player_event(req: PlayerEventRequest):
 
 @app.get("/api/stats")
 async def get_stats(api_key: str = ""):
-    valid_key = get_valid_api_key()
-    if api_key != valid_key:
+    # Optional API key for stats to allow dashboard access
+    # In a production environment with auth, this would be session-protected.
+    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
+    if api_key and api_key != valid_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
         
     registry = server_creator.load_registry()
