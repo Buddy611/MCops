@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Form, BackgroundTasks, HTTPException, UploadFile, File  # pyrefly: ignore[missing-import]
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse  # pyrefly: ignore[missing-import]
@@ -25,11 +26,38 @@ async def stats_task():
         await asyncio.sleep(60)
 
 
+# ─────────────────────────────────────────────
+# UPDATE CHECK (GitHub)
+# ─────────────────────────────────────────────
+update_info = {"latest_version": None, "available": False}
+
+async def update_check_task():
+    global update_info
+    import httpx
+    import re
+    from mcops.config import VERSION
+    while True:
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.get("https://raw.githubusercontent.com/Buddy611/MCops/main/mcops/config.py", timeout=10)
+                if res.status_code == 200:
+                    match = re.search(r'VERSION\s*=\s*"([^"]+)"', res.text)
+                    if match:
+                        latest = match.group(1)
+                        update_info["latest_version"] = latest
+                        update_info["available"] = (latest != VERSION)
+        except Exception as e:
+            log.error(f"Update check error: {e}")
+        await asyncio.sleep(86400) # Once a day
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(stats_task())
+    s_task = asyncio.create_task(stats_task())
+    u_task = asyncio.create_task(update_check_task())
     yield
-    task.cancel()
+    s_task.cancel()
+    u_task.cancel()
 
 
 app = FastAPI(title="MCOps Panel", lifespan=lifespan)
@@ -41,6 +69,8 @@ static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 templates = Jinja2Templates(directory=str(MCOPS_DIR / "templates"))
+from mcops.config import VERSION
+templates.env.globals.update(VERSION=VERSION)
 
 
 # ─────────────────────────────────────────────
@@ -55,7 +85,7 @@ async def dashboard(request: Request):
         info["status"] = statuses.get(name, "offline")
     return templates.TemplateResponse(
         request=request, name="dashboard.html",
-        context={"servers": registry, "active_page": "dashboard"}
+        context={"servers": registry, "active_page": "dashboard", "update": update_info}
     )
 
 
@@ -386,10 +416,17 @@ class CreateServerRequest(BaseModel):
     start_after_creation: bool = True
 
 
+def get_valid_api_key():
+    key = os.environ.get("MCOPS_API_KEY")
+    if not key:
+        raise RuntimeError("MCOPS_API_KEY environment variable not set!")
+    return key
+
+
 @app.post("/api/server/create")
 async def api_create_server(req: CreateServerRequest):
     import os
-    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
+    valid_key = get_valid_api_key()
     if req.api_key != valid_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
     try:
@@ -414,8 +451,7 @@ class ServerActionRequest(BaseModel):
 
 @app.post("/api/server/action")
 async def api_server_action(req: ServerActionRequest):
-    import os
-    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
+    valid_key = get_valid_api_key()
     if req.api_key != valid_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
         
@@ -442,6 +478,38 @@ async def api_server_action(req: ServerActionRequest):
         return {"status": "offline"}
     else:
         raise HTTPException(status_code=400, detail="Invalid action")
+
+
+@app.post("/api/system/update")
+async def trigger_update():
+    # In a real environment, we'd check the API key or session
+    # For now, let's assume it's triggered from the UI
+    registry = server_creator.load_registry()
+    statuses = server_creator.get_all_statuses(registry)
+    running_servers = [name for name, status in statuses.items() if status == "online"]
+
+    # 1. Stop all servers
+    for name in running_servers:
+        server_creator.stop_server_tmux(name, registry[name].get("software", "paper"))
+    
+    # Give them a few seconds to stop
+    await asyncio.sleep(5)
+
+    # 2. Pull new version
+    import subprocess
+    try:
+        # Assuming we are in the repository root
+        subprocess.run(["git", "pull"], check=True)
+    except Exception as e:
+        log.error(f"Git pull failed: {e}")
+        # Even if pull fails, try to restart servers
+    
+    # 3. Restart servers
+    for name in running_servers:
+        info = registry[name]
+        server_creator.start_server_tmux(name, info.get("ram_gb", 2), info.get("software", "paper"))
+
+    return JSONResponse({"status": "ok", "message": "Update finished. All servers restarted."})
 
 
 # ─────────────────────────────────────────────
@@ -508,8 +576,7 @@ class PlayerEventRequest(BaseModel):
 @app.post("/api/stats/event")
 async def record_player_event(req: PlayerEventRequest):
     """Called by the MCOps plugins on player join/quit."""
-    import os
-    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
+    valid_key = get_valid_api_key()
     if req.api_key != valid_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
         
@@ -522,8 +589,7 @@ async def record_player_event(req: PlayerEventRequest):
 
 @app.get("/api/stats")
 async def get_stats(api_key: str = ""):
-    import os
-    valid_key = os.environ.get("MCOPS_API_KEY", "changeme")
+    valid_key = get_valid_api_key()
     if api_key != valid_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
         

@@ -33,6 +33,7 @@ MCOPS_USER="${MCOPS_USER:-mcops}"
 BASE_DIR="${BASE_DIR:-/opt/mcops}"
 PORT="${MCOPS_PORT:-8000}"
 API_KEY="$(openssl rand -hex 16 2>/dev/null || cat /dev/urandom | tr -dc 'a-f0-9' | head -c 32)"
+USER_PASS="$(openssl rand -base64 12 | tr -d '+/=')"
 DB_NAME="mcops"
 DB_USER="mcops"
 DB_PASS="$(openssl rand -base64 18 | tr -d '+/=')"
@@ -43,6 +44,7 @@ VENV_DIR="$BASE_DIR/venv"
 echo -e "  ${CYAN}Directory:${NC}    $BASE_DIR"
 echo -e "  ${CYAN}Port:${NC}         $PORT"
 echo -e "  ${CYAN}System-User:${NC}  $MCOPS_USER"
+echo -e "  ${CYAN}User-Pass:${NC}    $USER_PASS"
 
 # ════════════════════════════════════════════════════════════════════════
 step "1/7 – Installing System Packages"
@@ -85,7 +87,8 @@ step "3/7 – User & Directories"
 # ════════════════════════════════════════════════════════════════════════
 if ! id "$MCOPS_USER" &>/dev/null; then
     useradd -r -s /bin/bash -m -d "$BASE_DIR" "$MCOPS_USER"
-    ok "System user '$MCOPS_USER' created"
+    echo "$MCOPS_USER:$USER_PASS" | chpasswd
+    ok "System user '$MCOPS_USER' created and password set"
 else
     ok "User '$MCOPS_USER' already exists"
 fi
@@ -206,7 +209,8 @@ pip install --quiet \
     cachetools \
     python-multipart \
     websockets \
-    aiofiles
+    aiofiles \
+    httpx
 
 ok "Python packages installed"
 
@@ -269,6 +273,7 @@ echo ""
 echo -e "  ${BOLD}Panel:${NC}        ${CYAN}http://${SERVER_IP}:${PORT}${NC}"
 echo -e "  ${BOLD}Status:${NC}       $(echo -e $STATUS)"
 echo -e "  ${BOLD}API Key:${NC}      ${YELLOW}${API_KEY}${NC}"
+echo -e "  ${BOLD}User Pass:${NC}    ${YELLOW}${USER_PASS}${NC}"
 echo ""
 echo -e "  ${BOLD}Database:${NC}"
 echo -e "    Host:     127.0.0.1:3306"

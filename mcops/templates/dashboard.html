@@ -11,6 +11,14 @@
         <span>➕</span> Create Server
     </a>
 </div>
+{% if update.available %}
+<div class="alert alert-info" style="margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;">
+    <div>
+        <strong>🚀 Update Available!</strong> New version <code>{{ update.latest_version }}</code> is ready.
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="triggerSystemUpdate()">Update Now</button>
+</div>
+{% endif %}
 
 <!-- STAT CARDS -->
 <div class="stats-grid">
@@ -143,5 +151,25 @@ async function serverAction(name, action, btn) {
 fetch('/api/stats').then(r=>r.json()).then(d=>{
     document.getElementById('player-count').textContent = d.current_players ?? 0;
 }).catch(()=>{});
+
+async function triggerSystemUpdate() {
+    if(!confirm("The update will stop all servers, pull the latest code, and restart the servers. Continue?")) return;
+    
+    // Show a loading overlay or change button state
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = "Updating...";
+
+    try {
+        const res = await fetch('/api/system/update', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || "Update finished!");
+        location.reload();
+    } catch(e) {
+        alert("Error during update: " + e);
+        btn.disabled = false;
+        btn.textContent = "Update Now";
+    }
+}
 </script>
 {% endblock %}

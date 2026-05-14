@@ -1,0 +1,16 @@
+.env
+*.env
+__pycache__/
+*.pyc
+.vscode/
+*.db
+instances/
+plugin-pool/
+templates/
+backups/
+global/
+logs/
+node_modules/
+dist/
+build/
+.DS_Store

@@ -1,10 +1,11 @@
-import os
 import sys
 from pathlib import Path
 
+VERSION = "2.0.0"
+
 # Use local directory if running on Windows (for testing), else /home/mcserver
 if sys.platform == "win32":
-    BASE_DIR = Path(r"c:\Users\jul_p\Desktop\Programmieren\Minecraft\Server Software").resolve()
+    BASE_DIR = (Path.home() / "Desktop" / "Programmieren" / "Minecraft" / "Server Software").resolve()
 else:
     BASE_DIR = Path("/home/mcserver").resolve()
 
