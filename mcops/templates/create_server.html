@@ -102,9 +102,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Version <span class="form-required">*</span></label>
-                        <select name="version" id="version-select" class="form-control" onchange="updateSummary()">
-                            <option value="">Loading…</option>
-                        </select>
+                        <input type="text" name="version" id="version-input" list="version-list" class="form-control"
+                            placeholder="Select or type version..." required oninput="updateSummary()">
+                        <datalist id="version-list">
+                            <option value="Loading…">
+                        </datalist>
                     </div>
                 </div>
 
@@ -195,23 +197,26 @@ function selectSoftware(label, sw) {
 }
 
 async function loadVersions(sw) {
-    const sel = document.getElementById('version-select');
-    sel.innerHTML = '<option>Loading…</option>';
+    const list = document.getElementById('version-list');
+    list.innerHTML = '<option value="Loading…">';
     try {
         const res = await fetch(`/api/versions/${sw}`);
         const versions = await res.json();
-        sel.innerHTML = versions.slice().reverse().map(v =>
+        list.innerHTML = versions.slice().reverse().map(v =>
             `<option value="${v}">${v}</option>`
         ).join('');
+        // Automatically set latest version if empty
+        const input = document.getElementById('version-input');
+        if(!input.value) input.value = versions[versions.length - 1];
         updateSummary();
     } catch(e) {
-        sel.innerHTML = '<option value="">Error loading</option>';
+        list.innerHTML = '<option value="">Error loading</option>';
     }
 }
 
 function updateSummary() {
     const name = document.querySelector('[name=server_name]').value || '–';
-    const ver = document.getElementById('version-select').value || '–';
+    const ver = document.getElementById('version-input').value || '–';
     const ram = document.querySelector('[name=ram_gb]').value || '2';
     const port = document.querySelector('[name=port]').value || 'auto';
     document.getElementById('s-name').textContent = name;

@@ -176,11 +176,55 @@ def create_server(
     return {"status": "success", "server_name": server_name, "port": port}
 
 
+def _get_java_path(mc_version: str) -> str:
+    """Detects the best Java version for the given Minecraft version."""
+    import re
+    import shutil as _shutil
+
+    # Default paths on Debian/Ubuntu
+    java_paths = {
+        21: "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        17: "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        11: "/usr/lib/jvm/java-11-openjdk-amd64/bin/java",
+        8:  "/usr/lib/jvm/java-8-openjdk-amd64/bin/java"
+    }
+
+    def get_installed(v):
+        p = java_paths.get(v)
+        if p and os.path.exists(p): return p
+        # Fallback to which
+        return _shutil.which(f"java-{v}") or _shutil.which("java")
+
+    try:
+        match = re.search(r'(\d+)\.(\d+)(\.(\d+))?', mc_version)
+        if not match: return _shutil.which("java") or "/usr/bin/java"
+        
+        minor = int(match.group(2))
+        patch = int(match.group(4)) if match.group(4) else 0
+
+        # 1.20.5+ -> Java 21
+        if minor > 20 or (minor == 20 and patch >= 5):
+            return get_installed(21)
+        # 1.17 - 1.20.4 -> Java 17
+        if minor >= 17:
+            return get_installed(17)
+        # 1.16 -> Java 11 (or 16, but 11 is common)
+        if minor >= 16:
+            return get_installed(11)
+        # < 1.16 -> Java 8
+        return get_installed(8)
+    except Exception:
+        return _shutil.which("java") or "/usr/bin/java"
+
+
 def start_server_tmux(server_name: str, ram_gb: int, software: str = "paper") -> bool:
     instance_dir = INSTANCES_DIR / server_name
     if not instance_dir.exists():
         log.error(f"Instance dir missing: {instance_dir}")
         return False
+
+    registry = load_registry()
+    mc_version = registry.get(server_name, {}).get("version", "1.21.2")
 
     tmux = _get_tmux_server()
     if not tmux:
@@ -192,13 +236,12 @@ def start_server_tmux(server_name: str, ram_gb: int, software: str = "paper") ->
         log.info(f"{server_name} already running.")
         return True
 
-    # Resolve java binary
-    import shutil as _shutil
-    java_bin = _shutil.which("java") or "/usr/bin/java"
+    java_bin = _get_java_path(mc_version)
+    log.info(f"Starting {server_name} (MC {mc_version}) with {java_bin}")
 
     cmd = (
         f"cd '{instance_dir}' && "
-        f"{java_bin} -Xmx{ram_gb}G -Xms512M "
+        f"'{java_bin}' -Xmx{ram_gb}G -Xms512M "
         f"-XX:+UseG1GC -XX:+ParallelRefProcEnabled "
         f"-jar server.jar nogui; "
         f"echo '[MCOps] Process exited with code $?'"
@@ -209,7 +252,7 @@ def start_server_tmux(server_name: str, ram_gb: int, software: str = "paper") ->
             session_name=session_name,
             window_name=server_name,
             window_command=cmd,
-            attach=False,  # run detached – do NOT use detach=True (wrong param)
+            attach=False,
         )
         log.info(f"Started {server_name} in tmux session '{session_name}'")
         return True

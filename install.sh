@@ -54,17 +54,20 @@ apt-get update -qq 2>/dev/null
 apt-get install -y -qq \
     python3 python3-pip python3-venv \
     tmux \
-    openjdk-21-jdk \
     curl wget unzip zip \
     sqlite3 \
     mariadb-server \
     gradle \
     2>/dev/null || true
 
-# Fallback: try openjdk-17 if 21 not available
-java -version &>/dev/null || apt-get install -y -qq openjdk-17-jdk 2>/dev/null || true
-java -version &>/dev/null || err "Java could not be installed"
-ok "System packages installed (Java, tmux, MariaDB, Gradle)"
+# Install multiple Java versions for different MC versions
+info "Installing Java 8, 11, 17, 21..."
+for v in 8 11 17 21; do
+    apt-get install -y -qq "openjdk-${v}-jdk" 2>/dev/null || warn "Could not install Java ${v}"
+done
+
+java -version &>/dev/null || err "No Java version could be installed"
+ok "System packages and Java versions (8, 11, 17, 21) installed"
 
 # ════════════════════════════════════════════════════════════════════════
 step "2/7 – Setting up MariaDB"
