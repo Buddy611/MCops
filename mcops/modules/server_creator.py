@@ -407,7 +407,7 @@ def stop_server_tmux(server_name: str, software: str = "paper") -> bool:
         return False
 
     try:
-        pane = session.attached_window.attached_pane
+        pane = session.active_window.active_pane
         pane.send_keys("end" if software.lower() == "velocity" else "stop")
         return True
     except Exception as e:

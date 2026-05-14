@@ -67,7 +67,7 @@ async def terminal_endpoint(websocket: WebSocket, server_name: str):
     if session:
         try:
             # Get the first pane of the active window
-            pane = session.attached_window.attached_pane
+            pane = session.active_window.active_pane
         except Exception as e:
             await websocket.send_text(f"[MCOps] Error attaching to terminal: {e}\r\n")
             await websocket.close()
