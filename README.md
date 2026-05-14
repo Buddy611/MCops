@@ -15,18 +15,6 @@ The one-command installer handles everything: dependencies, database setup, and 
 git clone https://github.com/Buddy611/MCops /tmp/mcops && cd /tmp/mcops && sudo bash install.sh
 ```
 
-**What the installer does:**
-
-* ✅ Installs system packages (Python 3, tmux, Java 21, MariaDB, Gradle)
-* ✅ Configures **MariaDB database** and local user
-* ✅ Creates the system user `mcops`
-* ✅ Sets up the directory structure under `/opt/mcops`
-* ✅ Configures the Python Virtual Environment + all dependencies
-* ✅ Registers & starts the Systemd service
-* ✅ Generates a random API key
-
-The panel will be accessible at `http://SERVER-IP:8000` after approximately 1–2 minutes.
-
 ### 🪟 Windows
 MCOps is fully compatible with Windows. Use the `setup.bat` for a quick environment setup.
 
@@ -39,6 +27,19 @@ MCOps is fully compatible with Windows. Use the `setup.bat` for a quick environm
     set MCOPS_API_KEY=your_key
     python mcops\main.py
     ```
+
+**What the installer does:**
+
+* ✅ Installs system packages (Python 3, tmux, Java 21, MariaDB, Gradle)
+* ✅ Configures **MariaDB database** and local user
+* ✅ Creates the system user `mcops`
+* ✅ Sets up the directory structure under `/opt/mcops`
+* ✅ Configures the Python Virtual Environment + all dependencies
+* ✅ Registers & starts the Systemd service
+* ✅ Generates a random API key
+
+The panel will be accessible at `http://SERVER-IP:8000` after approximately 1–2 minutes.
+
 
 ### 🗑️ Uninstallation
 Need a clean slate? The uninstaller removes everything safely.
