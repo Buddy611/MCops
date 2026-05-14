@@ -248,6 +248,6 @@ curl -X POST http://localhost:8000/api/stats/event \
 
 ---
 
-*Made with ai, use with caution*
-*Open Beta, not fully working*
-*Would love for a real dev to make it better :D*
+*Made with ai, use with caution.* 
+*Open Beta, not fully working.*
+*Would love for a real dev to make it better :D.*
