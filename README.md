@@ -16,10 +16,16 @@ git clone https://github.com/Buddy611/MCops /tmp/mcops && cd /tmp/mcops && sudo 
 ```
 
 **What the installer does:**
-* ✅ **System Core:** Installs Python 3, tmux, Java 21, MariaDB, and Gradle.
-* ✅ **Database:** Fully configures a local **MariaDB instance** for your network.
-* ✅ **Security:** Creates a dedicated `mcops` system user and generates a unique **128-bit API Key**.
-* ✅ **Service:** Registers and starts the `mcops.service` via Systemd.
+
+* ✅ Installs system packages (Python 3, tmux, Java 21, MariaDB, Gradle)
+* ✅ Configures **MariaDB database** and local user
+* ✅ Creates the system user `mcops`
+* ✅ Sets up the directory structure under `/opt/mcops`
+* ✅ Configures the Python Virtual Environment + all dependencies
+* ✅ Registers & starts the Systemd service
+* ✅ Generates a random API key
+
+The panel will be accessible at `http://SERVER-IP:8000` after approximately 1–2 minutes.
 
 ### 🪟 Windows
 MCOps is fully compatible with Windows. Use the `setup.bat` for a quick environment setup.
@@ -27,6 +33,7 @@ MCOps is fully compatible with Windows. Use the `setup.bat` for a quick environm
 1.  **Clone the Repo** or download the ZIP.
 2.  **Run `setup.bat`**: This creates a virtual environment and installs dependencies.
 3.  **Start the Panel**:
+
     ```cmd
     call venv\Scripts\activate
     set MCOPS_API_KEY=your_key
@@ -41,19 +48,6 @@ Need a clean slate? The uninstaller removes everything safely.
 
 *⚠️ Warning: This will permanently delete all panel data, server instances, and databases.*
 
----
-
-The script automatically performs the following:
-
-* ✅ Installs system packages (Python 3, tmux, Java 21, MariaDB, Gradle)
-* ✅ Configures **MariaDB database** and local user
-* ✅ Creates the system user `mcops`
-* ✅ Sets up the directory structure under `/opt/mcops`
-* ✅ Configures the Python Virtual Environment + all dependencies
-* ✅ Registers & starts the Systemd service
-* ✅ Generates a random API key
-
-The panel will be accessible at `http://SERVER-IP:8000` after approximately 1–2 minutes.
 
 ---
 
