@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}System Settings – MCOps{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">System Settings</div>
+        <div class="page-subtitle">
+            Manage panel updates and system configuration 
+            • <a href="https://github.com/Buddy611/MCops" target="_blank" style="color:var(--blue-h); text-decoration:none;">View on GitHub</a>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- VERSION & UPDATE CARD -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">🚀 System Update</span>
+        </div>
+        <div class="card-body">
+            <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem; background:var(--surface2); border-radius:8px; border:1px solid var(--border);">
+                    <div>
+                        <div class="text-muted text-sm fw-600" style="text-transform:uppercase; letter-spacing:0.05em;">Current Version</div>
+                        <div style="font-size:1.5rem; font-weight:700; margin-top:0.25rem;">v{{ VERSION }}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="text-muted text-sm fw-600" style="text-transform:uppercase; letter-spacing:0.05em;">Latest Version</div>
+                        <div style="font-size:1.5rem; font-weight:700; margin-top:0.25rem; color:{{ 'var(--green)' if not update.available else 'var(--yellow)' }}">
+                            {{ update.latest_version or 'Checking...' }}
+                        </div>
+                    </div>
+                </div>
+
+                {% if update.available %}
+                <div class="alert alert-info">
+                    <strong>Update Available!</strong> A newer version (v{{ update.latest_version }}) is available on GitHub. 
+                    The update will pull the latest code and restart all servers.
+                </div>
+                <button class="btn btn-primary btn-lg" id="update-btn" onclick="triggerSystemUpdate()" style="width:100%; justify-content:center;">
+                    <span>🆙</span> Update to v{{ update.latest_version }}
+                </button>
+                {% else %}
+                <div style="text-align:center; padding:1rem; color:var(--green); font-weight:500;">
+                    ✅ You are running the latest version.
+                </div>
+                <button class="btn btn-ghost" onclick="location.reload()" style="width:100%; justify-content:center;">
+                    Check for Updates
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- SYSTEM INFO CARD -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">ℹ️ System Information</span>
+        </div>
+        <div class="card-body">
+            <table style="width:100%; border-collapse:collapse;">
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td class="text-muted" style="padding:0.75rem 0;">OS</td>
+                    <td style="text-align:right; padding:0.75rem 0;">{{ sys_info.os }}</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td class="text-muted" style="padding:0.75rem 0;">Python Version</td>
+                    <td style="text-align:right; padding:0.75rem 0;">{{ sys_info.python }}</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td class="text-muted" style="padding:0.75rem 0;">Panel Directory</td>
+                    <td style="text-align:right; padding:0.75rem 0;"><code class="text-sm">{{ sys_info.dir }}</code></td>
+                </tr>
+                <tr>
+                    <td class="text-muted" style="padding:0.75rem 0;">API Key</td>
+                    <td style="text-align:right; padding:0.75rem 0;">
+                        <button class="btn btn-ghost btn-sm" onclick="toggleApiKey(this)">Show Key</button>
+                        <code id="api-key-display" style="display:none; margin-left:0.5rem;" class="text-sm">********</code>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header">
+        <span class="card-title">⚠️ Danger Zone</span>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-2">The uninstaller will permanently remove all panel data, servers, and the database.</p>
+        <div style="background:var(--red-dim); border:1px solid var(--red); border-radius:8px; padding:1rem; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-weight:700; color:var(--red);">Uninstall MCOps</div>
+                <div class="text-sm" style="color:var(--red); opacity:0.8;">This action is irreversible.</div>
+            </div>
+            <code>sudo bash uninstall.sh</code>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function triggerSystemUpdate() {
+    if(!confirm("The update will stop all servers, pull the latest code, and restart the servers. Continue?")) return;
+    
+    const btn = document.getElementById('update-btn');
+    const origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Updating System...';
+
+    try {
+        const res = await fetch('/api/system/update', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || "Update finished!");
+        location.reload();
+    } catch(e) {
+        alert("Error during update: " + e);
+        btn.disabled = false;
+        btn.innerHTML = origText;
+    }
+}
+
+function toggleApiKey(btn) {
+    const display = document.getElementById('api-key-display');
+    if (display.style.display === 'none') {
+        // We don't actually pass the key to the template for security, 
+        // but we can tell them where to find it.
+        display.textContent = "Check /etc/systemd/system/mcops.service";
+        display.style.display = 'inline';
+        btn.textContent = "Hide";
+    } else {
+        display.style.display = 'none';
+        btn.textContent = "Show Key";
+    }
+}
+</script>
+{% endblock %}
