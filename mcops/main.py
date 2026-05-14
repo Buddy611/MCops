@@ -640,3 +640,32 @@ async def get_stats(api_key: str = ""):
         "timeseries":      stats_manager.get_timeseries(24),
         "recent_events":   stats_manager.get_recent_events(20),
     }
+
+
+# ─────────────────────────────────────────────
+# BACKUPS
+# ─────────────────────────────────────────────
+
+@app.post("/api/server/backup")
+async def trigger_backup(data: dict, background_tasks: BackgroundTasks):
+    server_name = data.get("server_name")
+    if not server_name:
+        raise HTTPException(status_code=400, detail="Missing server_name")
+    
+    # We run the backup in the background because zip can take long
+    background_tasks.add_task(server_creator.backup_server, server_name)
+    
+    return {"status": "success", "message": f"Backup for {server_name} started in background."}
+
+@app.get("/api/server/backups/{server_name}")
+async def get_backups(server_name: str):
+    backups = server_creator.list_backups(server_name)
+    return {"server": server_name, "backups": backups}
+
+@app.get("/api/server/backup/download/{filename}")
+async def download_backup(filename: str):
+    from mcops.config import BACKUPS_DIR
+    file_path = BACKUPS_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Backup not found")
+    return FileResponse(path=file_path, filename=filename, media_type='application/zip')

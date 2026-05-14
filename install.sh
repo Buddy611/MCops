@@ -116,37 +116,15 @@ ok "Directory structure created under $BASE_DIR"
 # ════════════════════════════════════════════════════════════════════════
 step "4/7 – Installing Panel Code"
 # ════════════════════════════════════════════════════════════════════════
-cp -r "$SOURCE_DIR/mcops" "$PANEL_DIR/"
-ok "mcops package copied"
+# Copy everything including .git so the panel can update itself
+cp -r "$SOURCE_DIR/." "$PANEL_DIR/"
+ok "Panel code and git metadata copied"
 
-# Touch __init__ files
-touch "$PANEL_DIR/mcops/__init__.py"
-touch "$PANEL_DIR/mcops/modules/__init__.py"
-touch "$PANEL_DIR/mcops/api/__init__.py"
-
-# Generate production config.py
-cat > "$PANEL_DIR/mcops/config.py" << PYEOF
-import sys
-from pathlib import Path
-
-BASE_DIR          = Path("$BASE_DIR")
-VERSION           = "2.0.0"
-INSTANCES_DIR     = BASE_DIR / "instances"
-PLUGIN_POOL_DIR   = BASE_DIR / "plugin-pool"
-TEMPLATES_DIR     = BASE_DIR / "templates"
-BACKUPS_DIR       = BASE_DIR / "backups"
-GLOBAL_DIR        = BASE_DIR / "global"
-DB_CONFIG_FILE    = GLOBAL_DIR / "db_config.env"
-SERVER_REGISTRY_FILE = GLOBAL_DIR / "server_registry.json"
-INJECTION_RULES_FILE = GLOBAL_DIR / "injection_rules.json"
-PLUGIN_TEMPLATES_DIR = GLOBAL_DIR / "plugin-templates"
-STATS_DB_FILE     = GLOBAL_DIR / "stats.db"
-MCOPS_DIR         = Path(__file__).parent.resolve()
-
-for _d in [INSTANCES_DIR, PLUGIN_POOL_DIR, TEMPLATES_DIR,
-           BACKUPS_DIR, GLOBAL_DIR, PLUGIN_TEMPLATES_DIR]:
-    _d.mkdir(parents=True, exist_ok=True)
-PYEOF
+# Ensure core directories exist
+for _d in "$BASE_DIR/instances" "$BASE_DIR/plugin-pool" "$BASE_DIR/templates" \
+           "$BASE_DIR/backups" "$BASE_DIR/global" "$BASE_DIR/global/plugin-templates"; do
+    mkdir -p "$_d"
+done
 
 # Write db_config.env with real credentials
 cat > "$BASE_DIR/global/db_config.env" << ENVEOF
@@ -228,6 +206,7 @@ WorkingDirectory=$PANEL_DIR
 Environment="PATH=$VENV_DIR/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 Environment="MCOPS_PORT=$PORT"
 Environment="MCOPS_API_KEY=$API_KEY"
+Environment="MCOPS_BASE_DIR=$BASE_DIR"
 ExecStart=$VENV_DIR/bin/python run.py
 Restart=on-failure
 RestartSec=5

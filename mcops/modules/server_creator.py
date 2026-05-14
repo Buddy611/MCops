@@ -465,16 +465,45 @@ def delete_server(server_name: str, remove_files: bool = True) -> bool:
     return True
 
 
+def list_backups(server_name: str | None = None) -> list[dict]:
+    """Lists all available backups, optionally filtered by server name."""
+    backups = []
+    if not BACKUPS_DIR.exists():
+        return backups
+    
+    for file in BACKUPS_DIR.iterdir():
+        if file.is_file() and file.suffix == ".zip":
+            if server_name and not file.name.startswith(server_name + "_"):
+                continue
+            stat = file.stat()
+            backups.append({
+                "filename": file.name,
+                "size_bytes": stat.st_size,
+                "created": stat.st_mtime,
+                "path": str(file)
+            })
+    return sorted(backups, key=lambda x: x["created"], reverse=True)
+
+
 def backup_server(server_name: str) -> str:
-    """Creates a zip backup of the server directory. Returns the backup path."""
+    """Creates a zip backup of the server directory."""
     instance_dir = INSTANCES_DIR / server_name
     if not instance_dir.exists():
         raise FileNotFoundError(f"Server directory not found: {server_name}")
 
     from datetime import datetime
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_name = f"{server_name}_{timestamp}"
-    backup_zip = BACKUPS_DIR / backup_name
-
-    shutil.make_archive(str(backup_zip), "zip", str(instance_dir))
-    return str(backup_zip) + ".zip"
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    
+    # Ensure backups dir exists
+    BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
+    
+    backup_filename = f"{server_name}_{timestamp}"
+    backup_path = BACKUPS_DIR / backup_filename
+    
+    # We use shutil.make_archive which is blocking, 
+    # so this should be called in a background task.
+    log.info(f"Starting backup for {server_name}...")
+    final_path = shutil.make_archive(str(backup_path), "zip", str(instance_dir))
+    log.info(f"Backup completed: {final_path}")
+    
+    return final_path

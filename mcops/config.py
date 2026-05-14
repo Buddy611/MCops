@@ -1,13 +1,13 @@
+import os
 import sys
 from pathlib import Path
 
 VERSION = "2.0.1"
 
-# Use local directory if running on Windows (for testing), else /home/mcserver
-if sys.platform == "win32":
-    BASE_DIR = (Path.home() / "Desktop" / "Programmieren" / "Minecraft" / "Server Software").resolve()
-else:
-    BASE_DIR = Path("/home/mcserver").resolve()
+# The base directory where all server data resides.
+# In production, this is usually /opt/mcops.
+DEFAULT_BASE = "/opt/mcops" if sys.platform != "win32" else str(Path.home() / "Desktop" / "Programmieren" / "Minecraft" / "Server Software")
+BASE_DIR = Path(os.environ.get("MCOPS_BASE_DIR", DEFAULT_BASE)).resolve()
 
 INSTANCES_DIR = BASE_DIR / "instances"
 PLUGIN_POOL_DIR = BASE_DIR / "plugin-pool"

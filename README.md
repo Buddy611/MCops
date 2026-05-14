@@ -43,8 +43,8 @@ MCOps is fully compatible with Windows. Use the `setup.bat` for a quick environm
 ### 🗑️ Uninstallation
 Need a clean slate? The uninstaller removes everything safely.
 
-*   **Linux**: `sudo bash uninstall.sh`
-*   **Windows**: Run `uninstall.bat`
+*   **Linux**: ```sudo bash uninstall.sh```
+*   **Windows**: Run ```uninstall.bat```
 
 *⚠️ Warning: This will permanently delete all panel data, server instances, and databases.*
 

@@ -65,31 +65,42 @@ async def terminal_endpoint(websocket: WebSocket, server_name: str):
 
     # If we have a tmux session, we can send input AND read output
     if session:
-        pane = session.attached_window.attached_pane
+        try:
+            # Get the first pane of the active window
+            pane = session.attached_window.attached_pane
+        except Exception as e:
+            await websocket.send_text(f"[MCOps] Error attaching to terminal: {e}\r\n")
+            await websocket.close()
+            return
 
         async def read_tmux_output():
             last_lines: list[str] = []
             while True:
                 try:
-                    output: list[str] = pane.cmd("capture-pane", "-p").stdout
+                    # Modern libtmux way to capture pane
+                    output = pane.capture_pane()
                     if output != last_lines:
-                        if len(output) >= len(last_lines):
+                        # Only send new lines
+                        if len(output) > len(last_lines) and output[:len(last_lines)] == last_lines:
                             new_content = output[len(last_lines):]
                         else:
                             new_content = output
+                        
                         for line in new_content:
                             await websocket.send_text(line + "\r\n")
                         last_lines = output
-                    await asyncio.sleep(0.3)
+                    await asyncio.sleep(0.2)
                 except Exception:
+                    # If tmux session dies, stop reading
                     break
 
         async def read_websocket_input():
             try:
                 while True:
                     data = await websocket.receive_text()
-                    pane.send_keys(data, enter=True)
-            except WebSocketDisconnect:
+                    if data:
+                        pane.send_keys(data, enter=True)
+            except Exception:
                 pass
 
         tasks = [
