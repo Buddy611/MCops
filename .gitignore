@@ -6,7 +6,6 @@ __pycache__/
 *.db
 instances/
 plugin-pool/
-templates/
 backups/
 global/
 logs/
