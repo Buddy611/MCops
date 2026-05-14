@@ -1,131 +1,232 @@
-# 🛡️ MCOps Panel
-**Lightweight, robust, and Docker-free Minecraft Server Management.**
+# MCOps Panel
 
-MCOps is a modern, high-performance management panel for Minecraft networks. It focuses on speed, simplicity, and deep integration with system tools like `tmux` and `systemd`, eliminating the overhead of containerization.
+**Minecraft server management panel – no Docker, no overhead.**
 
 ---
 
-## 🚀 Quick Start
-
-### 📦 Installation
-The one-command installer handles everything: dependencies, database setup, and service registration.
+## ⚡ Installation (1 Command)
 
 ```bash
-# Clone and install in one go
 git clone https://github.com/Buddy611/MCops /tmp/mcops && cd /tmp/mcops && sudo bash install.sh
 ```
 
-**What the installer does:**
-* ✅ **System Core:** Installs Python 3, tmux, Java 21, MariaDB, and Gradle.
-* ✅ **Database:** Fully configures a local **MariaDB instance** for your network.
-* ✅ **Security:** Creates a dedicated `mcops` system user and generates a unique **128-bit API Key**.
-* ✅ **Service:** Registers and starts the `mcops.service` via Systemd.
-
-### 🗑️ Uninstallation
-Need a clean slate? The uninstaller removes everything safely.
+Or, if you already have the files:
 
 ```bash
-# Run the uninstaller from the repo directory
+sudo bash install.sh
+
+```
+Uninstallation:
+
+```bash
 sudo bash uninstall.sh
 ```
-*⚠️ Warning: This will permanently delete all panel data, server instances, and databases.*
+
+The script automatically performs the following:
+
+* ✅ Installs system packages (Python 3, tmux, Java 21, MariaDB, Gradle)
+* ✅ Configures **MariaDB database** and local user
+* ✅ Creates the system user `mcops`
+* ✅ Sets up the directory structure under `/opt/mcops`
+* ✅ Configures the Python Virtual Environment + all dependencies
+* ✅ Registers & starts the Systemd service
+* ✅ Generates a random API key
+
+The panel will be accessible at `http://SERVER-IP:8000` after approximately 1–2 minutes.
 
 ---
 
-## ✨ Features
+## 🖥 Features
 
 | Feature | Description |
-| :--- | :--- |
-| **📊 Dashboard** | Real-time overview of all servers, status badges, and live player counts. |
-| **🛠️ Server Creator** | Zero-config server setup. Select software, version, RAM, and plugins. |
-| **💻 Web Console** | Full-duplex WebSocket terminal with command history and live output. |
-| **📂 File Manager** | Integrated web-based IDE to edit, upload, move, or delete files. |
-| **🔌 Plugin Pool** | Upload once, deploy everywhere. Manage plugins centrally for the whole network. |
-| **🗄️ DB Injection** | Auto-inject MariaDB/MySQL credentials into plugin configs via Jinja2 templates. |
-| **🌐 Velocity Sync** | Automatic proxy synchronization—new servers are added to Velocity instantly. |
-| **🛡️ Backup System** | One-click ZIP backups for entire server instances. |
-| **🔑 Secure API** | Full REST API for automation, player tracking, and status monitoring. |
-
----
-
-## 🔒 Security & Privacy
-* **Hardened API:** Access is restricted via a mandatory, randomly generated `MCOPS_API_KEY`.
-* **Safe Defaults:** No hardcoded passwords or insecure fallbacks.
-* **Privacy Focused:** Environment-aware configuration; no personal paths or sensitive data in code.
-* **Clean Repo:** Strict `.gitignore` policy to prevent accidental leaks of `.env` or `.db` files.
+| --- | --- |
+| **Dashboard** | All servers at a glance with status badges and **live player counts** |
+| **Create Server** | Automatic JAR download, EULA acceptance, and server.properties setup |
+| **Settings Editor** | Configure RAM, ports, MOTD, and game rules directly from the UI |
+| **Live Console** | WebSocket terminal directly in your browser with command history |
+| **File Manager** | Browse, edit, upload, and delete files via web interface |
+| **Plugin Pool** | Global plugins – upload once, assign to multiple servers |
+| **Database Manager** | Central MariaDB/MySQL config with **Jinja2 auto-injection** |
+| **Velocity Sync** | New servers are automatically added to `velocity.toml` |
+| **Analytics API** | Open API for player event tracking (joins/quits) and time-series data |
+| **Backup** | One-click ZIP backups for entire server instances |
+| **Start/Stop/Restart/Kill** | Full power control via UI, REST API, or Terminal |
 
 ---
 
 ## 📁 Directory Structure
-MCOps follows a clean, standardized structure under `/opt/mcops/`:
 
-```text
+```
 /opt/mcops/
-├── 🏰 instances/        # All running Minecraft servers
-├── 📥 plugin-pool/      # Centralized JAR storage
-├── 💾 backups/          # Compressed server backups
-├── ⚙️ global/           # System-wide configs, DB env, and registry
-├── 🖥️ panel/            # Core MCOps Panel application code
-├── 🐍 venv/             # Isolated Python environment
-└── 📝 logs/             # Centralized panel logs
+├── instances/          # Running MC servers
+│   ├── survival/
+│   │   ├── server.jar
+│   │   ├── server.properties
+│   │   └── ...
+│   └── velocity-proxy/
+│       └── velocity.toml  ← automatically populated
+├── plugin-pool/        # Global plugin JARs (.jar)
+├── backups/            # Automatic ZIP backups
+├── global/
+│   ├── server_registry.json
+│   ├── db_config.env      # Global DB credentials
+│   ├── injection_rules.json
+│   ├── plugin-templates/  # Jinja2 templates for plugin configs
+│   └── stats.db           # SQLite analytics database
+├── panel/              # Panel code (mcops package)
+├── venv/               # Python Virtual Environment
+└── logs/
+    └── mcops.log
+
 ```
 
 ---
 
-## 🔧 Supported Software
-| Software | Version Support | Ideal For |
-| :--- | :--- | :--- |
-| **Paper** | Latest & Legacy | High-performance Spigot/Bukkit plugins (inc. 1.21.2). |
-| **Velocity** | Latest | The modern, fast, and secure proxy (inc. 1.21.2). |
-| **Fabric** | 1.14+ | Modded servers and performance (inc. 1.21.2). |
+## 🔧 Supported Server Software
+
+| Software | Download Source | Usage |
+| --- | --- | --- |
+| **Paper** | PaperMC API | High performance, Spigot plugins |
+| **Velocity** | PaperMC API | Proxy (BungeeCord replacement) |
+| **Fabric** | FabricMC Meta | Mods & lightweight performance (1.21.x) |
 
 ---
 
-## 🛠 Management Commands
+---
+
+MCOps features a centralized database management system. Configure your MariaDB/MySQL credentials once in the **Database** tab:
+
+* **Central Config:** All servers can share the same database host.
+* **Auto-Injection:** When a server is created (or settings are saved), credentials are automatically injected.
+* **Jinja2 Templates:** Injection uses powerful Jinja2 templates located in `global/plugin-templates/`.
+* **Custom Rules:** Map any file path (e.g., `plugins/LuckPerms/config.yml`) to a template in `injection_rules.json`.
+
+---
+
+## ⚙️ Server Settings Editor
+
+No more manual editing of `server.properties`. The integrated editor allows you to:
+* Change **RAM allocation** (GB)
+* Update **Server Port**
+* Toggle **Online-Mode**, **PVP**, and **Difficulty**
+* Edit **MOTD** and **Max Players**
+* Changes are applied after a server restart.
+
+---
+
+## 📦 Global Plugin Pool
+
+Manage your plugins centrally:
+* **Upload:** Drag & drop `.jar` files into the Plugin Pool.
+* **Deploy:** Select plugins during server creation to have them automatically installed.
+* **Persistence:** Deleting a server does not delete the global plugin from the pool.
+
+---
+
+## 🔗 Velocity Auto-Sync
+
+If a Velocity proxy server is present in `instances/` (identified by `velocity.toml`), every newly created server is **automatically** added to the `velocity.toml` and a `velocity reload` command is triggered.
+
+No more manual editing of `velocity.toml` required.
+
+---
+
+## 🛠 Management
 
 ```bash
-# Check if the panel is running
+# Check status
 systemctl status mcops
 
-# Restart the panel (e.g., after a git pull)
+# Restart (after code changes)
 systemctl restart mcops
 
-# Watch live logs
+# View live logs
 journalctl -u mcops -f
 
-# Custom Port: Use 'systemctl edit mcops' to set MCOPS_PORT environment.
+# Change panel port
+systemctl edit mcops   # Environment=MCOPS_PORT=9000
+systemctl restart mcops
 ```
 
 ---
 
-## 🔗 Automation API
+## 🔑 API
 
-MCOps provides a powerful JSON API for external automation.
+### Create Server
 
-### Create a Server
-`POST /api/server/create`
-```json
--d '{
-  "api_key": "YOUR_KEY",
-  "server_name": "Skyblock_01",
-  "software": "paper",
-  "version": "1.21.2",
-  "ram_gb": 4,
-  "plugins": ["LuckPerms", "EssentialsX"]
-}'
-
+```bash
+curl -X POST http://localhost:8000/api/server/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "api_key": "YOUR_API_KEY",
+    "server_name": "Your_Server_Name",
+    "software": "Your_Server_Software",
+    "version": "Your_Server_Version",
+    "ram_gb": 4,
+    "plugins": ["Your_Plugin_Name"],
+    "start_after_creation": true
+  }'
 ```
 
-### Server Actions
-`POST /api/server/action`
+### Server Action (Start/Stop/Restart/Kill)
+
+```bash
+curl -X POST http://localhost:8000/api/server/action \
+  -H "Content-Type: application/json" \
+  -d '{
+    "api_key": "YOUR_API_KEY",
+    "server_name": "Your_Server_Name",
+    "action": "start | stop | restart | kill"
+  }'
+```
+
+### Global Statistics
+
+```bash
+curl -X GET "http://localhost:8000/api/stats?api_key=YOUR_API_KEY"
+```
+
+**Response Example:**
 ```json
 {
-  "api_key": "YOUR_KEY",
-  "server_name": "Skyblock_01",
-  "action": "start | stop | restart | kill"
+  "current_players": 5,
+  "online_players": ["Player1", "Player2"],
+  "per_server": {"Server 1": 3, "Server 2": 2},
+  "server_info": {
+    "Server 1": {
+      "status": "online",
+      "software": "Your_Software",
+      "version": "Your_Version",
+      "port": 25565,
+      "ram_gb": 4,
+      "plugins": ["Your_Plugin"],
+      "players": 3
+    },
+    "Server 2": {
+      "status": "offline",
+      "software": "Your_Software",
+      "version": "Your_Version",
+      "port": 25577,
+      "ram_gb": 2,
+      "plugins": [],
+      "players": 2
+    }
+  },
+  "peak_today": {"time": "2024-05-14T10:00:00", "peak": 12},
+  "timeseries": [{"time": "...", "players": 5}, ...],
+  "recent_events": [{"player": "Player1", "event": "join", "server": "Server 1", "timestamp": "..."}]
 }
 ```
 
----
+### Push Player Event
 
-*Built with ❤️ for the Minecraft Community.*
+```bash
+curl -X POST http://localhost:8000/api/stats/event \
+  -H "Content-Type: application/json" \
+  -d '{
+    "api_key": "YOUR_API_KEY",
+    "player": "PlayerName",
+    "event": "join",
+    "server": "Your_Server_Name"
+  }'
+```
