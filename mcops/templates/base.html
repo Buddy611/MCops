@@ -514,7 +514,7 @@
         MCOps
     </a>
     <div class="topbar-spacer"></div>
-    <span class="topbar-pill">Panel v{{ VERSION }}</span>
+    <a href="/settings" class="topbar-pill" style="text-decoration:none;">Panel v{{ VERSION }}</a>
 </header>
 
 <!-- LAYOUT -->
@@ -538,6 +538,12 @@
             </a>
             <a href="/database" class="sidebar-link {% if active_page == 'database' %}active{% endif %}">
                 <span class="sidebar-icon">🗄</span> Database
+            </a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-label">System</div>
+            <a href="/settings" class="sidebar-link {% if active_page == 'settings' %}active{% endif %}">
+                <span class="sidebar-icon">⚙️</span> Settings
             </a>
         </div>
     </nav>

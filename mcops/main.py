@@ -107,6 +107,21 @@ async def create_server_form(request: Request):
     )
 
 
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    import platform
+    import sys
+    sys_info = {
+        "os": f"{platform.system()} {platform.release()}",
+        "python": sys.version.split()[0],
+        "dir": str(MCOPS_DIR)
+    }
+    return templates.TemplateResponse(
+        request=request, name="settings.html",
+        context={"active_page": "settings", "update": update_info, "sys_info": sys_info}
+    )
+
+
 @app.post("/create", response_class=HTMLResponse)
 async def create_server_submit(
     request: Request,
